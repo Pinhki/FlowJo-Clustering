@@ -1,0 +1,1443 @@
+/* ==========================================================================
+   Wan Lab – Layout & Utility Overrides
+   ========================================================================== */
+
+/* --- Global Corner System (single control point) --- */
+:root {
+  --wan-radius-sm: 8px;
+  --wan-radius-md: 10px;
+  --wan-radius-lg: 14px;
+  --wan-radius-btn: 10px;
+  --wan-radius-btn-lg: 12px;
+  --wan-corner-smoothing: 0.46;
+  --wan-corner-smoothing-soft: 0.34;
+  --wan-corner-smoothing-strong: 0.58;
+  --wan-corner-smoothing-btn: 0.38;
+  --wan-concentric-step: 3px;
+  --wan-radius-sm-inner: clamp(0px, calc(var(--wan-radius-sm) - var(--wan-concentric-step)), 999px);
+  --wan-radius-md-inner: clamp(0px, calc(var(--wan-radius-md) - var(--wan-concentric-step)), 999px);
+  --wan-radius-lg-inner: clamp(0px, calc(var(--wan-radius-lg) - var(--wan-concentric-step)), 999px);
+}
+
+/* Apply a unified smooth corner aesthetic across the app */
+.card,
+.btn,
+.form-control,
+.form-select,
+.selectize-control .selectize-input,
+.irs-line,
+.irs-bar,
+.irs-bar-edge,
+.modal-content,
+.dropdown-menu,
+.dropdown-item,
+.table,
+.dataTables_wrapper .dataTables_scroll,
+.bslib-sidebar-layout > .sidebar,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr,
+.rds-export-wrap,
+.rds-export-empty-msg,
+.rds-bundle-note,
+.flow-gate-card {
+  border-radius: var(--wan-radius-md) !important;
+  clip-path: none !important;
+  -webkit-clip-path: none !important;
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing);
+}
+
+/* Small controls */
+.btn-sm,
+.sidebar-file-item,
+.rds-meta-chip,
+.rds-bundle-chip {
+  border-radius: var(--wan-radius-sm) !important;
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing-soft);
+}
+
+/* Buttons are intentionally less smoothed than cards to avoid pill/capsule drift */
+.btn {
+  border-radius: var(--wan-radius-btn) !important;
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing-btn);
+}
+
+.btn.btn-lg {
+  border-radius: var(--wan-radius-btn-lg) !important;
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing-btn);
+}
+
+/* Larger blocks */
+.welcome-hero-card,
+.env-hero-card,
+.rds-top-card {
+  border-radius: var(--wan-radius-lg) !important;
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing-strong);
+}
+
+/* Nested elements use an inner radius to preserve concentricity */
+.dropdown-menu .dropdown-item {
+  border-radius: var(--wan-radius-sm-inner) !important;
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing-soft);
+}
+
+/* Utility class for custom markup that needs smooth rectangular corners. */
+.wan-squircle {
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing);
+}
+
+/* Progressive enhancement:
+   Default path is classic border-radius for predictable borders/shadows.
+   Apply continuous superellipse corners anywhere the app already uses rounded rectangles. */
+@supports (corner-shape: superellipse(1.414)) {
+  .wan-squircle,
+  .card,
+  .btn,
+  .form-control,
+  .form-select,
+  .selectize-control .selectize-input,
+  .irs-line,
+  .irs-bar,
+  .irs-bar-edge,
+  .modal-content,
+  .dropdown-menu,
+  .dropdown-item,
+  .table,
+  .dataTables_wrapper .dataTables_scroll,
+  .bslib-sidebar-layout > .sidebar,
+  .bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr,
+  .rds-export-wrap,
+  .rds-export-empty-msg,
+  .rds-bundle-note,
+  .rds-code-block-wrap,
+  .rds-important-note,
+  .rds-import-note,
+  .flow-inline-note,
+  .flow-gate-card,
+  .welcome-hero-card,
+  .env-hero-card,
+  .rds-top-card,
+  .sidebar-section .btn,
+  .card-page-card,
+  .sidebar-file-item,
+  .sidebar-file-item .sidebar-remove-btn,
+  .wl-side,
+  .app-page .alert,
+  .app-page .focus_card_style,
+  .app-page .important_card_style,
+  .beta-badge,
+  .app-page .plot_area_card_style,
+  .tabbable > .nav.nav-tabs .nav-link,
+  .tabbable > .nav.nav-pills .nav-link,
+  .app-tabs-wrap .nav.nav-tabs .nav-link,
+  .app-tabs-wrap .nav.nav-pills .nav-link,
+  body.figure-studio-active .app-page .lab-hero,
+  body.figure-studio-active .app-page .poline-hero,
+  body.figure-studio-active .app-page .lab-card,
+  body.figure-studio-active .app-page .poline-card,
+  body.figure-studio-active .app-page .lab-chip,
+  body.figure-studio-active .app-page .poline-chip,
+  body.figure-studio-active .app-page .lab-code,
+  body.figure-studio-active .app-page .poline-code,
+  .hto-scatter-controls,
+  .hto-pop-grid details,
+  .hto-tsne-opts,
+  .hto-heatmap-box,
+  .hto-method-picker .radio label,
+  .hto-normalize-picker .checkbox label,
+  .elbow-missing-warning-card,
+  .analysis-selector-overlay-link,
+  .dbl-inline-note,
+  .vdj-panel-stack .well,
+  .rv-demo,
+  .import-samples-modal .import-yellow-note,
+  .vdj-detect-modal .checkbox label,
+  .welcome-flow-step,
+  .so-card,
+  .wl-pdf-preview-resize-box,
+  .mcp-shell,
+  .mcp-swatch,
+  .mcp-select,
+  .mcp-chip,
+  .ccp-shell,
+  .ccp-swatch,
+  .ccp-select,
+  .ccp-chip {
+    corner-shape: superellipse(1.414);
+  }
+}
+
+/* --- Typography (Arial for non-navbar UI text only) --- */
+.tab-content,
+.bslib-sidebar-layout > .sidebar,
+.footer,
+.tab-content p,
+.tab-content span,
+.tab-content label,
+.tab-content li,
+.tab-content td,
+.tab-content th,
+.tab-content small,
+.tab-content strong,
+.tab-content em,
+.tab-content h1,
+.tab-content h2,
+.tab-content h3,
+.tab-content h4,
+.tab-content h5,
+.tab-content h6,
+.bslib-sidebar-layout > .sidebar p,
+.bslib-sidebar-layout > .sidebar span,
+.bslib-sidebar-layout > .sidebar label,
+.bslib-sidebar-layout > .sidebar li,
+.bslib-sidebar-layout > .sidebar td,
+.bslib-sidebar-layout > .sidebar th,
+.bslib-sidebar-layout > .sidebar h1,
+.bslib-sidebar-layout > .sidebar h2,
+.bslib-sidebar-layout > .sidebar h3,
+.bslib-sidebar-layout > .sidebar h4,
+.bslib-sidebar-layout > .sidebar h5,
+.bslib-sidebar-layout > .sidebar h6,
+.footer,
+.footer span,
+.footer a {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Keep buttons/icons in default UI font stack so icon fonts render correctly */
+.tab-content button,
+.tab-content .btn,
+.bslib-sidebar-layout > .sidebar button,
+.bslib-sidebar-layout > .sidebar .btn {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.tab-content i.fa,
+.tab-content i.fas,
+.tab-content i.far,
+.tab-content i.fab,
+.bslib-sidebar-layout > .sidebar i.fa,
+.bslib-sidebar-layout > .sidebar i.fas,
+.bslib-sidebar-layout > .sidebar i.far,
+.bslib-sidebar-layout > .sidebar i.fab {
+  font-family: "Font Awesome 5 Free", "Font Awesome 5 Brands" !important;
+}
+
+/* --- SIDEBAR STYLING --- */
+.bslib-sidebar-layout {
+  overflow-x: clip;
+}
+.bslib-sidebar-layout > .main,
+.bslib-sidebar-layout > .sidebar,
+.bslib-sidebar-layout > .sidebar > .sidebar-content {
+  overflow-x: hidden !important;
+}
+.bslib-sidebar-layout > .sidebar {
+  background-color: #f8f9fa;
+  border-left: 1px solid #dee2e6;
+}
+
+/* bslib adds body-level gap spacing (16px) via .bslib-gap-spacing.
+   In page-fill + sidebar mode this creates a visible right inset.
+   Keep body padding flush so sidebar hugs the viewport edge. */
+body.bslib-page-fill.has-page-sidebar.bslib-gap-spacing {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Light mode: right sidebar should read like a soft floating surface. */
+body:not(.app-dark-mode) .bslib-sidebar-layout.sidebar-right > .sidebar {
+  background-color: #ffffff;
+  border-left: 0;
+  box-shadow: -12px 0 34px rgba(15, 23, 42, 0.038), -2px 0 8px rgba(15, 23, 42, 0.025);
+}
+
+/* Dark mode: sidebar must follow dark palette like the rest of the UI. */
+body.app-dark-mode .bslib-sidebar-layout.sidebar-right > .sidebar {
+  background-color: #1b1f26;
+  border-left: 1px solid #2f3540;
+  box-shadow: -12px 0 34px rgba(0, 0, 0, 0.35), -2px 0 8px rgba(0, 0, 0, 0.22);
+  color: #e5e7eb;
+}
+
+body.app-dark-mode .bslib-sidebar-layout > .sidebar,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar p,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar span,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar label,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar li,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar td,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar th,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar h1,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar h2,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar h3,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar h4,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar h5,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar h6 {
+  color: #e5e7eb !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .form-control,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .form-select,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .selectize-input,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .selectize-dropdown {
+  background: #262c36 !important;
+  border-color: #3a4352 !important;
+  color: #e5e7eb !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn {
+  background: #2c3340 !important;
+  border-color: #414b5c !important;
+  color: #e5e7eb !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn:hover {
+  background: #394254 !important;
+  border-color: #4d596e !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn-primary,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn-success {
+  color: #ffffff !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout > .sidebar table.dataTable,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar table.dataTable th,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar table.dataTable td {
+  background: #222833 !important;
+  color: #e5e7eb !important;
+  border-color: #384254 !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .dataTables_wrapper .dataTables_scrollBody {
+  background: #222833 !important;
+}
+.sidebar-section {
+  margin-bottom: 15px;
+}
+.sidebar-section .btn {
+  border-radius: var(--wan-radius-md);
+  font-weight: 500;
+}
+
+/* --- MAIN CONTENT SPACING FIX --- */
+.bslib-page-fill > .bslib-sidebar-layout > .main {
+  /* Removed extra padding overrides to restore default alignment */
+}
+
+/* --- Shared Card Page Template --- */
+.card-page-wrap {
+  padding-top: var(--card-page-top-offset, 0px);
+  background: transparent;
+}
+
+.card-page-card {
+  border: 1px solid #e5e7eb;
+  border-radius: var(--wan-radius-md);
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.card-page-content > :last-child {
+  margin-bottom: 0;
+}
+
+.card-page-content {
+  background: transparent;
+}
+
+/* --- UTILITIES --- */
+.card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--wan-radius-md);
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* Light mode cards: no border + very subtle high-blur shadow. */
+body:not(.app-dark-mode) .card,
+body:not(.app-dark-mode) .card-page-card {
+  background: #ffffff;
+  border: 0;
+  box-shadow: 0 10px 34px rgba(15, 23, 42, 0.035), 0 2px 8px rgba(15, 23, 42, 0.018);
+}
+
+/* Dark mode layout parity: keep card border width the same as light mode (no size shift). */
+body.app-dark-mode .card,
+body.app-dark-mode .card-page-card {
+  border: 0;
+}
+
+/* Focus/important highlight cards must never be overridden by generic card rules. */
+body:not(.app-dark-mode) .app-page .focus_card_style {
+  border: 1px solid #bbf7d0 !important;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.24), 0 6px 14px rgba(34, 197, 94, 0.16) !important;
+}
+
+body:not(.app-dark-mode) .app-page .important_card_style {
+  border: 1px solid #fecaca !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.24), 0 6px 14px rgba(239, 68, 68, 0.16) !important;
+}
+
+.shiny-input-container { width: 100%; }
+
+/* QC Page Specifics */
+.qc-violins { display: flex; flex-wrap: wrap; gap: 10px; }
+.qc-vln { flex: 1; min-width: 300px; }
+
+/* Hidden inputs utility */
+.shiny-input-container[style*="none"] {
+  display: none !important;
+}
+
+/* --- Sidebar compact layout tweaks --- */
+.sidebar-env-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 32px;
+}
+.sidebar-env-right {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.sidebar-env-status {
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.sidebar-env-right > .shiny-html-output {
+  display: inline-flex;
+  align-items: center;
+}
+.sidebar-env-label {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sidebar-env-status.status-missing {
+  color: #dc3545;
+}
+
+.sidebar-env-status.status-ready {
+  color: #198754;
+}
+
+.sidebar-file-actions {
+  margin-bottom: 8px;
+}
+
+/* Reliable native FCS upload trigger (no proxy click JS) */
+.sidebar-fcs-upload .shiny-input-container {
+  margin-bottom: 0 !important;
+}
+.sidebar-fcs-upload .form-control {
+  display: none !important;
+}
+.sidebar-fcs-upload .input-group-btn {
+  width: 100% !important;
+}
+.sidebar-fcs-upload .input-group-btn .btn {
+  width: 100% !important;
+}
+.right-sidebar-stack {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  margin-top: 18px;
+}
+.sidebar-data-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-data-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 2px;
+  box-sizing: border-box;
+}
+.sidebar-bottom-actions {
+  margin-top: auto;
+  padding-top: 4px;
+  border-top: 1px solid #dde2e8;
+}
+
+.sidebar-bottom-actions .workspace-tip {
+  font-size: 12px;
+  line-height: 1.25;
+  color: #5f6b7a;
+  margin-bottom: 8px;
+}
+
+.sidebar-bottom-actions .workspace-btn {
+  font-weight: 600;
+}
+
+.sidebar-bottom-actions .workspace-btn.workspace-btn-ready,
+.sidebar-bottom-actions .workspace-btn.workspace-btn-ready:focus,
+.sidebar-bottom-actions .workspace-btn.workspace-btn-ready:hover {
+  background-color: #10b981 !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.sidebar-bottom-actions .workspace-btn.workspace-btn-disabled,
+.sidebar-bottom-actions .workspace-btn.workspace-btn-disabled:focus,
+.sidebar-bottom-actions .workspace-btn.workspace-btn-disabled:hover {
+  background-color: #9ca3af !important;
+  border-color: #9ca3af !important;
+  color: #ffffff !important;
+}
+
+/* Ensure sidebar container itself is a full-height flex column */
+.bslib-sidebar-layout > .sidebar > .sidebar-content,
+.bslib-sidebar-layout > .sidebar > .sidebar-content.bslib-gap-spacing {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  gap: 0 !important;
+  padding-top: 22px !important;
+}
+
+.bslib-sidebar-layout > .sidebar .dataTable,
+.bslib-sidebar-layout > .sidebar table.dataTable {
+  font-size: 0.82rem;
+}
+
+.bslib-sidebar-layout > .sidebar table.dataTable th,
+.bslib-sidebar-layout > .sidebar table.dataTable td {
+  padding: 4px 6px;
+}
+
+/* FCS registry table: keep headers/cells on a single line and avoid overlap */
+.bslib-sidebar-layout > .sidebar .sidebar-fcs-table,
+.bslib-sidebar-layout > .sidebar .sidebar-fcs-table th,
+.bslib-sidebar-layout > .sidebar .sidebar-fcs-table td {
+  white-space: nowrap !important;
+}
+
+.bslib-sidebar-layout > .sidebar .sidebar-fcs-table {
+  font-size: 0.74rem !important;
+}
+
+.bslib-sidebar-layout > .sidebar .sidebar-fcs-table th {
+  font-size: 0.72rem !important;
+  line-height: 1.1;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-table {
+  table-layout: fixed;
+  width: 100% !important;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-table th:nth-child(1),
+.bslib-sidebar-layout > .sidebar table.sidebar-data-table td:nth-child(1) {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-table th:nth-child(2),
+.bslib-sidebar-layout > .sidebar table.sidebar-data-table td:nth-child(2) {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+.bslib-sidebar-layout > .sidebar .dataTables_wrapper table.sidebar-data-menu,
+.bslib-sidebar-layout > .sidebar .dataTables_scrollBody table.sidebar-data-menu {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu.no-footer {
+  border-bottom: 0 !important;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu thead {
+  display: none;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr {
+  background: transparent;
+  border: 0;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr.selected,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr:hover {
+  background: transparent !important;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu td.sidebar-file-cell {
+  padding: 4px 2px !important;
+  width: 100% !important;
+  max-width: 0 !important;
+  overflow: hidden;
+  border: 0 !important;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr:hover > td,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr.selected > td {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.sidebar-file-item {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  position: relative;
+  overflow: visible;
+}
+.sidebar-file-item .sfi-title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  font-size: 0.80rem;
+  font-weight: 600;
+  line-height: 1.14 !important;
+  color: #1f2937;
+  white-space: normal !important;
+  overflow: hidden !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  padding-right: 24px;
+}
+.sidebar-file-item .sfi-title .sfi-title-text {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.sidebar-file-item .sfi-meta1,
+.sidebar-file-item .sfi-meta2 {
+  display: block;
+  margin-top: 0 !important;
+  font-size: 0.70rem;
+  color: #5f6b7a;
+  line-height: 1.2;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  padding-right: 24px;
+}
+.sidebar-file-item .sfi-meta-sep {
+  color: #6b7280;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu .sidebar-file-item .sfi-title {
+  min-width: 0 !important;
+  width: 100% !important;
+  line-height: 1.14 !important;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu .sidebar-file-item .sfi-title .sfi-title-text {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu .sidebar-file-item .sfi-meta1,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu .sidebar-file-item .sfi-meta2 {
+  margin-top: 0 !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+.sidebar-file-empty {
+  font-size: 0.82rem;
+  color: #6b7280;
+  padding: 6px 2px;
+}
+
+.sidebar-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-file-list .sidebar-file-item {
+  cursor: pointer;
+}
+.bslib-sidebar-layout > .sidebar .dataTables_wrapper,
+.bslib-sidebar-layout > .sidebar .datatables {
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  max-width: 100%;
+}
+
+.bslib-sidebar-layout > .sidebar .dataTables_wrapper .dataTables_scroll,
+.bslib-sidebar-layout > .sidebar .dataTables_wrapper .dataTables_scrollBody {
+  overflow-x: hidden !important;
+}
+
+/* --- Sidebar top-row alignment (collapse + environment) --- */
+.bslib-sidebar-layout > .sidebar {
+  position: relative;
+}
+
+.bslib-sidebar-layout > .sidebar .collapse-toggle,
+.bslib-sidebar-layout > .sidebar .sidebar-toggle,
+.bslib-sidebar-layout > .sidebar .bslib-sidebar-toggle,
+.bslib-sidebar-layout > .collapse-toggle,
+.bslib-sidebar-layout > .bslib-sidebar-toggle {
+  position: absolute;
+  top: calc(var(--_icon-size, 1rem) / 2);
+  right: 8px;
+  margin: 0;
+  z-index: 10;
+}
+
+/* Right-side sidebar: keep equal top/left inset for the fold button */
+.bslib-sidebar-layout.sidebar-right > .collapse-toggle,
+.bslib-sidebar-layout.sidebar-right > .bslib-sidebar-toggle,
+.bslib-sidebar-layout.sidebar-right > .sidebar .collapse-toggle,
+.bslib-sidebar-layout.sidebar-right > .sidebar .bslib-sidebar-toggle {
+  top: 8px;
+  left: 8px;
+  right: auto;
+}
+
+.sidebar-env-section {
+  margin-top: 2px;
+  padding-top: 0;
+}
+.bslib-sidebar-layout:not(.sidebar-right) .sidebar-env-row {
+  padding-right: calc(var(--_icon-button-size, 2rem) + 6px);
+  padding-left: 0;
+}
+.bslib-sidebar-layout.sidebar-right .sidebar-env-row {
+  padding-left: calc(var(--_icon-button-size, 2rem) + 3px);
+  padding-right: 0;
+}
+
+/* --- Welcome page layout --- */
+.welcome-page-wrap {
+  --welcome-card-gap: 14px;
+  padding: var(--welcome-card-gap);
+}
+
+.welcome-page-wrap .row {
+  margin-left: calc(-1 * var(--welcome-card-gap) / 2);
+  margin-right: calc(-1 * var(--welcome-card-gap) / 2);
+}
+
+.welcome-page-wrap [class*="col-"] {
+  padding-left: calc(var(--welcome-card-gap) / 2);
+  padding-right: calc(var(--welcome-card-gap) / 2);
+}
+
+.welcome-hero-card {
+  margin-top: 0;
+  margin-bottom: var(--welcome-card-gap);
+  border: 1px solid #dfe3e8;
+  background: #ffffff;
+}
+
+.welcome-eyebrow {
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: #6b7280;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.welcome-title {
+  margin: 0 0 8px 4px;
+  font-size: 1.46rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2;
+}
+
+.welcome-lead {
+  margin-bottom: 6px;
+  font-size: 0.92rem;
+}
+
+.welcome-sublead {
+  margin-top: 10px;
+  margin-bottom: 2px;
+  color: #6b7280;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.welcome-cta-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.welcome-cta-row .btn {
+  min-width: 180px;
+  padding: 10px 18px;
+  border-radius: var(--wan-radius-btn-lg) !important;
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing-btn);
+}
+
+.welcome-cta-row .welcome-btn-start.btn {
+  background: #22c55e !important;
+  border-color: #34d278 !important;
+  border-width: 2px !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.28);
+}
+
+.welcome-cta-row .welcome-btn-start.btn:hover,
+.welcome-cta-row .welcome-btn-start.btn:focus {
+  background: #16a34a !important;
+  border-color: #2dc06a !important;
+  border-width: 2px !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.32);
+}
+
+.welcome-cta-row .welcome-btn-start.btn:active {
+  background: #15803d !important;
+  border-color: #24ad5b !important;
+  border-width: 2px !important;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.24);
+}
+
+.welcome-cta-row .welcome-link-why,
+.welcome-cta-row .welcome-link-why:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 42px;
+  padding: 0;
+  margin: 0;
+  text-decoration: none;
+  background: transparent !important;
+  border: 0 !important;
+  color: #b08900 !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.1;
+  align-self: flex-end;
+}
+
+.welcome-cta-row .welcome-link-why:hover,
+.welcome-cta-row .welcome-link-why:focus {
+  color: #8f6f00 !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  outline: none;
+}
+
+.welcome-cta-row .welcome-link-why:active {
+  color: #705700 !important;
+}
+
+.welcome-block {
+  min-height: 260px;
+  margin-top: 0;
+  margin-bottom: var(--welcome-card-gap);
+}
+
+.welcome-block-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1f2937;
+}
+
+.welcome-update-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.welcome-update-list li {
+  margin-bottom: 6px;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.welcome-steps {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.welcome-steps li {
+  margin-bottom: 8px;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.welcome-empty-note {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.welcome-tutorial-modal-content {
+  max-height: 72vh;
+  overflow-y: auto;
+  padding: 8px 12px 10px;
+  box-sizing: border-box;
+}
+
+.welcome-tutorial-modal-content .card {
+  margin-top: 0;
+  margin-bottom: 12px;
+  margin-left: 2px;
+  margin-right: 2px;
+}
+
+.welcome-tutorial-modal-content .card:last-child {
+  margin-bottom: 0;
+}
+
+.welcome-tutorial-figure {
+  margin-top: 10px;
+}
+
+.welcome-tutorial-figure .img-responsive {
+  width: 100%;
+  height: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--wan-radius-sm);
+  background: #ffffff;
+}
+
+.welcome-tutorial-citation {
+  margin: 6px 0 0 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+  line-height: 1.35;
+}
+
+.welcome-credits {
+  margin-top: 0;
+  padding: 8px 2px;
+  border-top: 1px solid #e5e7eb;
+  color: #6b7280;
+}
+
+.welcome-credits-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: #4b5563;
+}
+
+.welcome-credits-line {
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.welcome-credits-note {
+  white-space: pre-line;
+}
+
+.welcome-update-link {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: #4b5563;
+}
+
+.welcome-update-link a {
+  color: #4b5563;
+  text-decoration: underline;
+}
+
+.welcome-update-link a:hover {
+  color: #1f2937;
+}
+
+/* --- Environment page professional layout --- */
+.env-page-wrap {
+  padding-top: var(--card-page-top-offset, 6px);
+}
+
+.env-hero-card {
+  margin-top: 0;
+  margin-bottom: 12px;
+  border: 1px solid #dfe3e8;
+}
+
+.env-hero-card h2 {
+  margin: 0 0 6px 0;
+  font-size: 1.55rem !important;
+  font-weight: 700 !important;
+}
+
+.env-hero-note {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #4b5563;
+}
+
+.env-select-card,
+.env-log-card,
+.env-next-card {
+  border: 1px solid #e5e7eb;
+}
+
+.env-next-card {
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.env-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #1f2937;
+}
+
+.env-card-subtitle {
+  font-size: 0.86rem;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.env-details-block {
+  margin: 8px 0 10px 0;
+  padding: 8px 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.env-detail-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  color: #374151;
+}
+
+.env-details-block ul {
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding-left: 18px;
+}
+
+.env-details-block li {
+  font-size: 0.84rem;
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+
+.env-status-inline {
+  margin-top: 10px;
+  font-size: 0.86rem;
+  color: #4b5563;
+}
+
+#env_log.env-log-pre {
+  min-height: 110px;
+  max-height: 170px;
+  overflow-y: auto;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  margin-bottom: 0;
+}
+
+.env-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.env-next-actions .btn {
+  min-width: 180px;
+}
+
+/* --- Environment version card selector --- */
+.env-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+
+.env-choice-card {
+  border: 1px solid #d5d9df;
+  background: #ffffff;
+  padding: 10px;
+  min-height: 250px;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+
+.env-choice-card:hover {
+  border-color: #8a95a3;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.env-choice-card.active {
+  border-color: #4b5563;
+  box-shadow: 0 0 0 2px rgba(75,85,99,0.14) inset;
+  background: #f9fafb;
+}
+
+.env-choice-card.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #f5f6f8;
+}
+
+.env-choice-logo {
+  width: 100%;
+  height: 58px;
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 8px;
+}
+
+.env-choice-logo-fallback {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: 1.8rem;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.env-choice-name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+  color: #1f2937;
+}
+
+.env-choice-sub {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.env-choice-list {
+  margin: 0;
+  padding-left: 17px;
+}
+
+.env-choice-list li {
+  font-size: 0.82rem;
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+
+.env-primary-action {
+  margin-top: 8px;
+}
+
+.env-primary-action .btn {
+  min-width: 220px;
+}
+
+/* keep log compact and below cards */
+#env_log.env-log-pre {
+  min-height: 90px;
+  max-height: 150px;
+}
+
+@media (max-width: 1200px) {
+  .env-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .env-choice-card {
+    min-height: auto;
+  }
+}
+
+/* Sidebar file type tint */
+.sidebar-file-item {
+  padding: 6px 8px;
+  border-radius: var(--wan-radius-md);
+  transition: box-shadow 120ms ease, border-color 120ms ease;
+}
+.sidebar-file-item.sfi-seurat {
+  background: #edf4ff;
+  border: 1px solid #d6e6ff;
+}
+.sidebar-file-item.sfi-tabular {
+  background: #ecf9f0;
+  border: 1px solid #d4eddc;
+}
+.sidebar-file-item.sfi-vdj {
+  background: #fff8db;
+  border: 1px solid #f4d77a;
+}
+.sidebar-file-list .sidebar-file-item:hover.sfi-seurat,
+.sidebar-file-list .sidebar-file-item.sfi-selected.sfi-seurat {
+  box-shadow: 0 0 0 1px rgba(183, 208, 245, 0.9), 0 5px 10px -9px rgba(72, 122, 197, 0.30);
+}
+.sidebar-file-list .sidebar-file-item:hover.sfi-tabular,
+.sidebar-file-list .sidebar-file-item.sfi-selected.sfi-tabular {
+  box-shadow: 0 0 0 1px rgba(190, 224, 203, 0.9), 0 5px 10px -9px rgba(39, 130, 86, 0.28);
+}
+.sidebar-file-list .sidebar-file-item:hover.sfi-vdj,
+.sidebar-file-list .sidebar-file-item.sfi-selected.sfi-vdj {
+  box-shadow: 0 0 0 1px rgba(240, 214, 130, 0.92), 0 5px 10px -9px rgba(182, 141, 33, 0.30);
+}
+.sidebar-file-list .sidebar-file-item.sfi-active {
+  border-color: #0f766e !important;
+  background: #e7f7f2 !important;
+  box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.32), 0 5px 10px -9px rgba(15, 118, 110, 0.30);
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr:hover .sidebar-file-item,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr.selected .sidebar-file-item {
+  background-image: none;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr:hover .sidebar-file-item.sfi-seurat,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr.selected .sidebar-file-item.sfi-seurat {
+  box-shadow: 0 0 0 1px rgba(183, 208, 245, 0.9), 0 5px 10px -9px rgba(72, 122, 197, 0.30);
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr:hover .sidebar-file-item.sfi-tabular,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr.selected .sidebar-file-item.sfi-tabular {
+  box-shadow: 0 0 0 1px rgba(190, 224, 203, 0.9), 0 5px 10px -9px rgba(39, 130, 86, 0.28);
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr:hover .sidebar-file-item.sfi-vdj,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr.selected .sidebar-file-item.sfi-vdj {
+  box-shadow: 0 0 0 1px rgba(240, 214, 130, 0.92), 0 5px 10px -9px rgba(182, 141, 33, 0.30);
+}
+.sidebar-file-item .sidebar-remove-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--wan-radius-sm-inner);
+  --wan-corner-smoothing-local: var(--wan-corner-smoothing-soft);
+  background: rgba(15, 23, 42, 0.08);
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
+}
+.sidebar-file-item .sidebar-remove-btn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr:hover .sidebar-remove-btn,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr.selected .sidebar-remove-btn,
+.sidebar-file-item:focus-within .sidebar-remove-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ==========================================================================
+   Grayscale sidebar/state overrides
+   ========================================================================== */
+
+/* Normalize right sidebar surfaces */
+body:not(.app-dark-mode) .bslib-sidebar-layout.sidebar-right > .sidebar {
+  background-color: #f3f3f3 !important;
+  box-shadow: -10px 0 26px rgba(0, 0, 0, 0.06), -2px 0 6px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout.sidebar-right > .sidebar {
+  background-color: #151515 !important;
+  border-left: 1px solid #2f2f2f !important;
+  box-shadow: -12px 0 34px rgba(0, 0, 0, 0.42), -2px 0 8px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* Ensure sidebar controls are grayscale in dark mode */
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .form-control,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .form-select,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .selectize-input,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .selectize-dropdown,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn-default,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn-primary,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn-success {
+  background: #242424 !important;
+  border-color: #3c3c3c !important;
+  color: #e3e3e3 !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn:hover,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn-default:hover,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn-primary:hover,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .btn-success:hover {
+  background: #2d2d2d !important;
+  border-color: #4a4a4a !important;
+}
+
+/* Replace any colored active/success markers with grayscale */
+.sidebar-file-item.is-active,
+.sidebar-file-item.active,
+.sidebar-file-item[data-active='true'] {
+  background: #e1e1e1 !important;
+  border-color: #b9b9b9 !important;
+}
+
+body.app-dark-mode .sidebar-file-item.is-active,
+body.app-dark-mode .sidebar-file-item.active,
+body.app-dark-mode .sidebar-file-item[data-active='true'] {
+  background: #2a2a2a !important;
+  border-color: #5a5a5a !important;
+}
+
+/* Active file card: border/fill color match */
+.sidebar-file-list .sidebar-file-item.sfi-active,
+.sidebar-file-item.sfi-active,
+.sidebar-file-item.is-active,
+.sidebar-file-item.active,
+.sidebar-file-item[data-active='true'] {
+  background: #e7f7f2 !important;
+  border-color: #e7f7f2 !important;
+  box-shadow: 0 0 0 1px #0f766e inset, 0 5px 10px -9px rgba(15, 118, 110, 0.30) !important;
+}
+
+body.app-dark-mode .sidebar-file-list .sidebar-file-item.sfi-active,
+body.app-dark-mode .sidebar-file-item.sfi-active,
+body.app-dark-mode .sidebar-file-item.is-active,
+body.app-dark-mode .sidebar-file-item.active,
+body.app-dark-mode .sidebar-file-item[data-active='true'] {
+  background: #24302c !important;
+  border-color: #24302c !important;
+  box-shadow: 0 0 0 1px #4f7a6f inset, 0 5px 10px -9px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Single-cell light sidebar background parity */
+body:not(.app-dark-mode) .bslib-sidebar-layout.sidebar-right > .sidebar {
+  background-color: #ffffff !important;
+}
+
+/* UMAP channel picker: one card per row */
+.channel-card-picker-wrap {
+  margin-top: 2px;
+}
+
+.channel-picker-title {
+  font-size: 0.76rem;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #4b5563;
+  margin: 0 0 6px 2px;
+}
+
+.channel-card-picker {
+  background: #f3f4f6;
+  border-radius: 12px;
+  max-height: 50svh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
+  padding-right: 4px;
+}
+
+.channel-card-picker .shiny-options-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.channel-card-picker .checkbox {
+  margin: 0;
+}
+
+.channel-card-picker .checkbox label {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 8px;
+  min-height: 22px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #1f2937;
+  font-weight: 500;
+  font-size: 0.73rem;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+.channel-card-picker .checkbox label:hover {
+  background: #f8fafc;
+  border-color: transparent;
+}
+
+.channel-card-picker .checkbox input[type='checkbox'] {
+  margin: 0;
+  transform: scale(0.76);
+}
+
+.channel-card-picker .channel-card-option {
+  display: inline-block;
+}
+
+body.app-dark-mode .channel-card-picker .checkbox label {
+  background: #2b313c;
+  border-color: transparent;
+  color: #e5e7eb;
+}
+
+body.app-dark-mode .channel-card-picker .checkbox label:hover {
+  background: #343c4a;
+  border-color: transparent;
+}
+
+body.app-dark-mode .channel-card-picker {
+  background: #202632;
+}
+
+body.app-dark-mode .channel-picker-title {
+  color: #a5a5a5;
+}
+
+/* UMAP/control-card compact density: smaller labels, smaller controls, tighter notes */
+.app-page .card-page-card .shiny-input-container {
+  margin-bottom: 2px;
+}
+
+.app-page .card-page-card .control-label {
+  font-size: 0.82rem;
+  line-height: 1.18;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #3f4855;
+}
+
+.app-page .card-page-card .form-control,
+.app-page .card-page-card select.form-control,
+.app-page .card-page-card input.form-control {
+  height: 34px;
+  min-height: 34px;
+  padding: 5px 10px;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.app-page .card-page-card .control-note {
+  font-size: 0.69rem;
+  line-height: 1.26;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+body.app-dark-mode .app-page .card-page-card .control-label {
+  color: #b6bdc8;
+}

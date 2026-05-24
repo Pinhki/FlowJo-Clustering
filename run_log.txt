@@ -1,0 +1,78 @@
+
+======================= R files successfully loaded ========================
+--- Working directory successfully set to: C:/Mac/Home/Documents/R pipeline/Flowjo Clustering/V0.1.0 Build 0106/Contents ---
+here() starts at C:/Mac/Home/Documents/R pipeline/Flowjo Clustering/V0.1.0 Build 0106/Contents
+--- Checking for Core UI Packages ---
+Found required package 'here'.
+Found required package 'remotes'.
+Found required package 'shiny'.
+Found required package 'shinyjs'.
+Found required package 'colourpicker'.
+Found required package 'ggplot2'.
+Found required package 'dplyr'.
+Found required package 'stringr'.
+Found required package 'RColorBrewer'.
+Found required package 'patchwork'.
+Found required package 'shinycssloaders'.
+Found required package 'scales'.
+Found required package 'cowplot'.
+--- Core UI packages are ready. ---
+
+[1] "\nif (!requireNamespace(\"loupeR\", quietly = F)) {\n  remotes::install_github(\"10xGenomics/loupeR\", force = T)\n}\n"
+Starting the application... Your web browser should open shortly.
+Loading required package: shiny
+Installing package into 'C:/Users/Pinhki/AppData/Local/R/win-library/4.4'
+(as 'lib' is unspecified)
+Warning: package 'FlowSOM' is not available for this version of R
+
+A version of this package for your version of R might be available elsewhere,
+see the ideas at
+https://cran.r-project.org/doc/manuals/r-patched/R-admin.html#Installing-packages
+
+Attaching package: 'shinyjs'
+
+The following object is masked from 'package:shiny':
+
+    runExample
+
+The following objects are masked from 'package:methods':
+
+    removeClass, show
+
+
+Attaching package: 'colourpicker'
+
+The following objects are masked from 'package:shinyjs':
+
+    colourInput, colourPicker, runExample, updateColourInput
+
+The following object is masked from 'package:shiny':
+
+    runExample
+
+
+Attaching package: 'dplyr'
+
+The following objects are masked from 'package:stats':
+
+    filter, lag
+
+The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: 'cowplot'
+
+The following object is masked from 'package:patchwork':
+
+    align_plots
+
+shiny.router from version > 0.2.3 introduced major
+  changes to the API. Old API is still working but has been marked as deprecated.
+  Please check the docs, or examples to learn more: https://github.com/Appsilon/shiny.router
+Warning in shiny.router::make_router(shiny.router::route("/", import_page_ui("import")),  :
+  make_router function is deprecated. Please use 'router_ui' instead.
+
+Listening on http://127.0.0.1:5198
+^C

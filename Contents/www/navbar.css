@@ -1,0 +1,299 @@
+/* ==========================================================================
+   Wan Lab – Navbar Theme
+   ========================================================================== */
+
+:root {
+  --nav-h: 56px;
+  --nav-x-pad: 14px;
+  --nav-item-x: 18px;
+}
+
+.navbar,
+.navbar.bg-light,
+.navbar.bg-white,
+.navbar-static-top {
+  background-color: #3a3a3a !important;
+  border-bottom: 1px solid #4a4a4a !important;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset !important;
+  min-height: var(--nav-h);
+  height: var(--nav-h);
+  padding: 0 !important;
+}
+
+/* Hard guard: keep top navbar full-width and dark even when global container rules exist */
+.navbar,
+.bslib-page-navbar .navbar,
+.bslib-page-navbar > .navbar {
+  width: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* Keep nav content vertically centered with proper gutters */
+.navbar .container-fluid {
+  min-height: var(--nav-h);
+  height: var(--nav-h);
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  background: transparent !important;
+  padding-left: var(--nav-x-pad);
+  padding-right: var(--nav-x-pad);
+}
+
+.navbar .container-fluid,
+.navbar .navbar-collapse,
+.navbar-nav {
+  display: flex;
+  align-items: stretch;
+}
+
+.navbar-nav {
+  margin: 0 6px;
+}
+
+.navbar-brand {
+  color: #f3f4f6 !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem;
+  letter-spacing: 0.2px;
+  margin-right: 20px;
+  padding: 0 12px;
+  height: var(--nav-h);
+  display: flex;
+  align-items: center;
+}
+
+.navbar-title-responsive {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10px;
+  line-height: 1.2;
+}
+
+.navbar-title-main {
+  font-weight: 700;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.navbar-title-ver {
+  font-size: 0.78rem;
+  opacity: 0.85;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+@media (min-width: 992px) {
+  .navbar-title-responsive {
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 0;
+    line-height: 1.1;
+  }
+
+  .navbar-title-ver {
+    font-size: 0.72rem;
+  }
+}
+
+/* No item margin; full-height clickable blocks via vertical centering */
+.navbar-nav .nav-item {
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  display: flex;
+  align-items: stretch;
+}
+
+.navbar-nav .nav-link {
+  margin: 0 !important;
+  padding: 0 var(--nav-item-x) !important;
+  min-height: var(--nav-h);
+  height: var(--nav-h);
+  border-radius: 0 !important;
+  color: #e3e3e3 !important;
+  font-weight: 600 !important;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.navbar-nav .nav-link.active,
+.navbar-nav .show > .nav-link {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 -2px 0 0 #ffffff inset !important;
+  border-radius: 0 !important;
+}
+
+
+
+/* Align right-side action links (e.g., Help) with menu row */
+.navbar .action-button,
+.navbar .nav-link.action-button {
+  margin: 0 !important;
+  padding: 0 var(--nav-item-x) !important;
+  min-height: var(--nav-h);
+  height: var(--nav-h);
+  display: flex !important;
+  align-items: center !important;
+  line-height: 1;
+  color: #e3e3e3 !important;
+  text-decoration: none;
+}
+
+.navbar .action-button:hover,
+.navbar .nav-link.action-button:hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.navbar .action-button .fa,
+.navbar .action-button .fas,
+.navbar .action-button .far,
+.navbar .action-button .fab {
+  margin-right: 6px;
+}
+
+/* Ensure dropdown starts below the navbar row */
+.navbar .dropdown {
+  position: relative;
+}
+
+.navbar .dropdown-menu {
+  top: calc(var(--nav-h) + 1px) !important;
+  left: 0;
+  right: auto;
+  transform: none !important;
+  z-index: 2000;
+  background: rgba(255, 255, 255, 0.5) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(125%);
+  backdrop-filter: blur(12px) saturate(125%);
+  border: none !important;
+  box-shadow: 0 8px 22px rgba(12, 18, 28, 0.10) !important;
+}
+
+.navbar .dropdown-menu,
+.navbar .dropdown-item {
+  border-radius: 0 !important;
+}
+
+/* Force square corners for all navbar menu surfaces and states */
+.navbar .nav-item,
+.navbar .nav-link,
+.navbar .dropdown-menu,
+.navbar .dropdown-item,
+.navbar .dropdown-item:hover,
+.navbar .dropdown-item:focus,
+.navbar .dropdown-item.active,
+.navbar .dropdown-item:active {
+  border-radius: 0 !important;
+}
+
+.navbar .dropdown-item {
+  color: #1f2937 !important;
+}
+
+.navbar .dropdown-item:hover,
+.navbar .dropdown-item:focus {
+  color: #111827 !important;
+  background: rgba(17, 24, 39, 0.07) !important;
+}
+
+.navbar .dropdown-item.active,
+.navbar .dropdown-item:active,
+.navbar .dropdown-item.active:focus,
+.navbar .dropdown-item.active:hover {
+  color: #111827 !important;
+  background: rgba(107, 114, 128, 0.30) !important;
+}
+
+/* Studio mode: dark frosted dropdown menus */
+body.figure-studio-active .navbar .dropdown-menu {
+  background: rgba(0, 0, 0, 0.5) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(125%);
+  backdrop-filter: blur(12px) saturate(125%);
+  border: none !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.26) !important;
+}
+
+body.figure-studio-active .navbar .dropdown-item {
+  color: #e5e7eb !important;
+}
+
+body.figure-studio-active .navbar .dropdown-item:hover,
+body.figure-studio-active .navbar .dropdown-item:focus {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+body.figure-studio-active .navbar .dropdown-item.active,
+body.figure-studio-active .navbar .dropdown-item:active,
+body.figure-studio-active .navbar .dropdown-item.active:focus,
+body.figure-studio-active .navbar .dropdown-item.active:hover {
+  color: #ffffff !important;
+  background: rgba(156, 163, 175, 0.34) !important;
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .navbar .dropdown-menu {
+    background: rgba(255, 255, 255, 0.94) !important;
+  }
+  body.figure-studio-active .navbar .dropdown-menu {
+    background: rgba(0, 0, 0, 0.84) !important;
+  }
+}
+
+/* Requested: desktop hover open/close for dropdown menus */
+@media (min-width: 992px) {
+  /* Invisible bridge increases effective hover target without changing visuals. */
+  .navbar .dropdown::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 8px;
+    background: transparent;
+  }
+
+  .navbar .dropdown-menu {
+    display: none !important;
+    margin-top: 0;
+    top: calc(var(--nav-h) + 1px) !important;
+  }
+
+  .navbar .dropdown:hover > .dropdown-menu {
+    display: block !important;
+  }
+
+  /* Force-close sticky Bootstrap click state; hover is the only opener */
+  .navbar .dropdown.show > .dropdown-menu {
+    display: none !important;
+  }
+
+  .navbar .dropdown > .dropdown-toggle {
+    pointer-events: none;
+  }
+}
+
+.navbar-toggler {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  height: 38px;
+  margin-top: 9px;
+  margin-bottom: 9px;
+}
+
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.78%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+}

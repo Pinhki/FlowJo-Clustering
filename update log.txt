@@ -1,0 +1,7 @@
+Build 0104
+
+- Fixed the problem that the plot sometimes not showing up.
+
+Build 0103
+
+- Allow control folding.

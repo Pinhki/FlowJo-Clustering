@@ -1,0 +1,270 @@
+/* www/app.css */
+/* ---------- Design tokens ---------- */
+:root{
+  --fg:#2a2a2a;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+  --brand:#111827;
+  --brand-accent:#4f46e5;
+  --bg:#ffffff;
+  --bg-soft:#fafafa;
+  --card:#ffffff;
+  --card-border:#e5e7eb;
+  --pill:#eef2ff;
+}
+
+/* ---------- Global layout ---------- */
+html,body,.container-fluid{
+  height:100%;
+  background:var(--bg);
+  color:var(--fg);
+}
+.content-wrap{
+  max-width:1200px;
+  margin:0 auto;
+  padding:16px 20px 40px;
+}
+
+.container-fluid {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* ---- Dark flat (macOS-style) toolbar ---- */
+.topbar{
+  background:#2a2b2f;                /* deep neutral, no gradient */
+  border-bottom:1px solid #2a2b2f;   /* subtle hairline */
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset; /* faint inner ring */
+  color:#e6e7ea;
+}
+.topbar-inner{
+  max-width:none;
+  margin:0;
+  display:flex;
+  align-items:center;
+  gap:20px;
+  padding:12px 20px;
+}
+
+/* Brand */
+.brand-title{ color:#f3f4f6; font-weight:700; }
+.brand-version{ 
+  color:#9aa0a6;
+  font-size:.95rem;
+}
+.brand-version a {
+  color: #9aa0a6;          /* match muted grey */
+  text-decoration: none;
+}
+.brand-version a:hover {
+  color: #ffffff;          /* brighten on hover (dark theme) */
+  text-decoration: underline;
+}
+
+/* Nav centered between brand and actions */
+.nav{
+  display:flex;
+  gap:18px;
+  justify-content:center;  /* center */
+  align-items:center;
+  flex:1 1 auto;           /* take remaining space */
+}
+.nav a{
+  padding:8px 10px;
+  border-radius:8px;
+  text-decoration:none;
+  color:#c9ccd1;
+  font-weight:600;
+  white-space:nowrap;
+  transition: color .15s, background .15s, border-color .15s, box-shadow .15s;
+}
+/* hover: subtle */
+.nav a:hover{
+  color:#ffffff;
+  background:rgba(255,255,255,0.06);
+}
+/* active: underlined, clean (Apple-like) */
+.nav a.active{
+  color:#ffffff;
+  background:transparent;
+  box-shadow: 0 2px 0 0 rgba(255,255,255,0.6); /* underline effect */
+  border-radius:0;
+}
+.nav a.disabled{ pointer-events:none; opacity:.4; }
+
+/* Right-aligned action buttons */
+.top-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-left:auto;        /* push actions to the far right */
+}
+.top-actions .btn{
+  padding:8px 14px;
+  font-size:.95rem;
+  line-height:1.2;
+  border-radius:8px;
+  border:1px solid #2f3237;
+  background:#1b1c1f;       /* flat dark */
+  color:#e6e7ea;
+}
+.top-actions .btn:hover{ background:#222429; border-color:#353940; }
+.top-actions .btn:focus{ outline:none; box-shadow:0 0 0 2px rgba(255,255,255,0.08) inset; }
+
+/* Save (success) — vibrant but flat */
+.top-actions .btn-success{
+  background:#22c55e;
+  border-color:#22c55e;
+  color:#0b2314;
+  font-weight:700;
+}
+.top-actions .btn-success:hover{ background:#1fb157; }
+
+/* Inputbox */
+.shiny-input-container {
+    width: 100% !important;
+  }
+  .shiny-input-container input[type='file'] {
+    width: 100% !important;
+  }
+  
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;   /* rounded corners */
+  padding: 20px;         /* decent spacing */
+  margin: 20px 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.card ul,
+.callout ul {
+  padding-left: 1.2rem;   /* reduce default browser indent (was ~2rem) */
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.card li,
+.callout li {
+  margin: 4px 0;          /* tighter vertical spacing */
+  line-height: 1.5;
+}
+
+/* --- Strong, square callouts with reliable spacing --- */
+.content-wrap .callout{
+  border-left:4px solid;
+  padding:14px 18px;
+  background:#f8fafc;                  /* neutral default */
+  line-height:1.5;
+  box-shadow:0 1px 2px rgba(0,0,0,0.05);
+  border-radius:0 !important;          /* squash any rounding */
+  margin:24px 0 !important;            /* reliable vertical gap */
+  display:flow-root;                   /* prevent margin-collapsing */
+}
+.callout h4 {
+    font-size: 1.4em;     /* larger than default */
+    font-weight: 500;     /* less bold than 700 */
+    margin-top: 0;        /* tidy spacing */
+  }
+.content-wrap .callout-title{
+  font-weight: 600;        /* lighter than 800 */
+  font-size: 1.25rem;      /* a bit larger */
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.content-wrap .callout-title .icon{ font-size:1.15em; line-height:1; }
+
+/* Variants */
+.content-wrap .callout.info    { border-left-color:#3b82f6; background:#eff6ff; }
+.content-wrap .callout.warn    { border-left-color:#f59e0b; background:#fffbeb; }
+.content-wrap .callout.success { border-left-color:#16a34a; background:#ecfdf5; }
+.content-wrap .callout.neutral { border-left-color:#cbd5e1; background:#f8fafc; }
+
+/* Inner spacing/typography */
+.content-wrap .callout p  { margin:0 0 6px 0; }
+.content-wrap .callout p:last-child { margin-bottom:0; }
+.content-wrap .callout ul { margin:0 0 0 1.1rem; }
+.content-wrap .callout li { margin:3px 0; }
+
+/* If Bootstrap/other components are adding rounding, flatten them here */
+.content-wrap .well,
+.content-wrap .panel,
+.content-wrap .panel-body,
+.content-wrap .card{
+  border-radius:0 !important;
+}
+
+/* Headings spacing to avoid collapsing into callouts */
+.content-wrap .section-title{ margin:28px 0 12px !important; }
+
+/* Extra safety: if two callouts are adjacent, enforce extra gap */
+.content-wrap .callout + .callout{ margin-top:24px !important; }
+.content-wrap .section-title + .callout{ margin-top:16px !important; }
+
+.steps-container{
+  display:flex;
+  flex-direction:column;
+}
+
+/* Each step row */
+.step{
+  display:grid;
+  grid-template-columns: 48px 1fr;
+  gap:12px;
+  align-items:center;
+  padding:16px 0;
+  border-bottom:1px dashed var(--line);  /* separator */
+}
+.step:last-child{
+  border-bottom:none;   /* remove dash after last */
+}
+
+/* Step dot (neutral gray style) */
+.step-dot{
+  width:48px; height:48px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:#f2f4f7;
+  color:#4b5563;
+  font-weight:700; font-size:1.5rem; line-height:1;
+}
+.step-dot.muted{
+  background:#f9fafb;
+  color:#6b7280;
+  border-color:#e5e7eb;
+}
+
+/* Text */
+.step-text h4{ margin:0; font-size:1.55rem; font-weight:600; }
+.step-text p{ margin:2px 0 0; color:#555; }
+/* ---------- Small responsive tweak ---------- */
+@media (max-width: 640px){
+  .topbar-inner{ flex-wrap:wrap; gap:10px; }
+  .nav{ order:3; margin-left:0; }
+  .top-actions{ margin-left:auto; }
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid var(--line);
+  background: var(--bg-soft);
+  padding: 16px 20px;
+  margin-top: 40px;
+}
+
+.footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.footer-inner a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.footer-inner a:hover {
+  color: var(--brand-accent);
+  text-decoration: underline;
+}

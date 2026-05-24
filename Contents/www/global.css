@@ -1,0 +1,2438 @@
+/* ================================
+   Wan Lab – Unified UI Styles (clean, no !important)
+   ================================ */
+
+/* ---------- Design tokens ---------- */
+:root{
+  --nav-h: 56px;
+  --footer-h: 40px;
+  --plotting-float-gap-y: 12px;
+  --page-title-size: 1.38rem;
+  --page-title-line-h: 1.2;
+  --page-title-icon-gap: 8px;
+  --page-title-sub-line-h: 1.34;
+  --page-title-left-offset: 20px;
+  --page-pad-top: 4px;
+  --page-pad-x: 8px;
+  --page-pad-bottom: 22px;
+  --plot-scroll-box-h: clamp(560px, calc(100dvh - var(--nav-h) - var(--footer-h) - 180px), 980px);
+  --fg:#2a2a2a;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+  --brand:#111827;
+  --brand-accent:#4f46e5;
+  --bg:#ffffff;
+  --bg-soft:#fafafa;
+  --card:#ffffff;
+  --card-border:transparent;
+  --pill:#eef2ff;
+  --app-max-width: 1600px;
+  --control-note-font-size: 0.74rem;
+  --control-note-line-height: 1.35;
+  --control-note-margin-top: 0;
+  --control-note-margin-bottom: 12px;
+  --card-subtitle-size: 14px;
+  --card-subtitle-color: #4b5563;
+  --card-subtitle-weight: 700;
+  --card-subtitle-spacing-top: 10px;
+  --card-subtitle-spacing-bottom: 8px;
+}
+
+body.app-dark-mode{
+  --bg:#121212;
+  --bg-soft:#1a1a1a;
+  --card:#222222;
+  --card-border:transparent;
+  --fg:#e5e7eb;
+  --muted:#9ca3af;
+  --card-subtitle-color: #a5a5a5;
+}
+
+.app-page .card-subsection-title{
+  font-size: var(--card-subtitle-size);
+  color: var(--card-subtitle-color);
+  font-weight: var(--card-subtitle-weight);
+  margin-top: var(--card-subtitle-spacing-top);
+  margin-bottom: var(--card-subtitle-spacing-bottom);
+  letter-spacing: 0.01em;
+}
+
+/* ---------- Global layout ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body{
+  height:100%;
+  background:var(--bg);
+  color:var(--fg);
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  overflow-x:hidden; /* stop horizontal scroll from wide widgets */
+}
+
+.container-fluid{
+  min-height:100%;
+  background:transparent;
+  color:var(--fg);
+
+  /* Keep Bootstrap’s gutter model aligned with .row (-15px margins) */
+  padding-left:15px;
+  padding-right:15px;
+
+  /* Full window width but capped & centered */
+  width:100%;
+  max-width:var(--app-max-width);
+  margin-left:auto;
+  margin-right:auto;
+
+  flex:1 0 auto;
+}
+
+.content-wrap{
+  margin:0 auto;
+  padding:16px 20px 40px;
+  display:flex;
+  flex-direction:column;
+  flex:1 0 auto;
+  min-height:0;
+
+  width:100%;
+  max-width:var(--app-max-width);
+}
+
+/* ---------- Custom Topbar ---------- */
+.topbar{
+  background:#2a2b2f;
+  border-bottom:1px solid #2a2b2f;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.02) inset;
+  color:#e6e7ea;
+  position:sticky; top:0; z-index:1020;
+}
+.topbar-inner{
+  max-width:none;
+  margin:0;
+  display:flex;
+  align-items:center;
+  gap:20px;
+  padding:12px 20px;
+}
+
+/* Brand */
+.brand-title{ color:#f3f4f6; font-weight:700; }
+.brand-version{ color:#9aa0a6; font-size:.95rem; }
+.brand-version a{ color:#9aa0a6; text-decoration:none; }
+.brand-version a:hover{ color:#ffffff; text-decoration:underline; }
+
+/* Centered nav */
+.topbar .nav{
+  display:flex;
+  gap:18px;
+  justify-content:center;
+  align-items:center;
+  flex:1 1 auto;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  padding:0; margin:0; border-radius:0;
+}
+.topbar .nav a{
+  padding:8px 10px;
+  border-radius:8px;
+  text-decoration:none;
+  color:#c9ccd1;
+  font-weight:600;
+  white-space:nowrap;
+  transition: color .15s, background .15s, border-color .15s, box-shadow .15s;
+  background:transparent;
+}
+.topbar .nav a:hover{ color:#ffffff; background:rgba(255,255,255,0.06); }
+.topbar .nav a.active{
+  color:#ffffff;
+  background:transparent;
+  box-shadow:0 2px 0 0 rgba(255,255,255,0.6);
+  border-radius:0;
+}
+.topbar .nav a.disabled{ pointer-events:none; opacity:.4; }
+
+/* Right actions */
+.top-actions{
+  display:flex; align-items:center; gap:10px; margin-left:auto;
+}
+.top-actions .btn{
+  padding:8px 14px; font-size:.95rem; line-height:1.2; border-radius:8px;
+  border:1px solid #2f3237; background:#1b1c1f; color:#e6e7ea;
+  transition: background-color .18s ease, border-color .18s ease,
+              box-shadow .18s ease, transform .12s ease;
+  will-change: background-color, border-color, box-shadow, transform;
+}
+.top-actions .btn:hover{ background:#222429; border-color:#353940; }
+.top-actions .btn:focus{ outline:none; box-shadow:0 0 0 2px rgba(255,255,255,0.08) inset; }
+.top-actions .btn-success{ background:#22c55e; border-color:#22c55e; color:#0b2314; font-weight:700; }
+.top-actions .btn-success:hover{ background:#1fb157; }
+.top-actions .btn:active{ transform: translateY(1px); }
+.top-actions .btn-primary{ background:#3b82f6; border-color:#3b82f6; color:#ffffff; }
+.top-actions .btn-primary:hover{ background:#2563eb; border-color:#2563eb; }
+.top-actions .btn-secondary{ background:#374151; border-color:#374151; color:#e6e7ea; }
+.top-actions .btn-secondary:hover{ background:#4b5563; border-color:#4b5563; }
+.top-actions .btn:disabled, .top-actions .btn.disabled{
+  opacity:.55; pointer-events:none; transform:none; box-shadow:none;
+}
+
+@media (max-width: 640px){
+  .topbar-inner{ flex-wrap:wrap; gap:10px; }
+  .topbar .nav{ order:3; margin-left:0; }
+  .top-actions{ margin-left:auto; }
+}
+
+/* Continuous-corner clip-path causes ring/cutout artifacts on buttons in some views. */
+.btn,
+.btn.btn-lg,
+.welcome-cta-row .btn {
+  clip-path: none !important;
+  -webkit-clip-path: none !important;
+}
+
+/* Safety: neutralize legacy continuous-corner clipping on all affected UI surfaces. */
+.card,
+.btn,
+.form-control,
+.form-select,
+.selectize-control .selectize-input,
+.irs-line,
+.irs-bar,
+.irs-bar-edge,
+.modal-content,
+.dropdown-menu,
+.dropdown-item,
+.dataTables_wrapper .dataTables_scroll,
+.bslib-sidebar-layout > .sidebar,
+.bslib-sidebar-layout > .sidebar table.sidebar-data-menu tbody tr,
+.rds-export-wrap,
+.rds-export-empty-msg,
+.rds-bundle-note,
+.flow-gate-card,
+.welcome-hero-card,
+.env-hero-card,
+.rds-top-card,
+.sidebar-section .btn,
+.card-page-card,
+.sidebar-file-item,
+.sidebar-file-item .sidebar-remove-btn {
+  clip-path: none !important;
+  -webkit-clip-path: none !important;
+}
+
+/* ---------- Inputs ---------- */
+.shiny-input-container{ width:100%; }
+.shiny-input-container input[type='file']{ width:100%; }
+
+/* Global dropdown typography (native select + selectize + bootstrap-select). */
+.app-page select.form-control,
+.app-page select.form-select,
+.app-page .selectize-control .selectize-input,
+.app-page .selectize-dropdown,
+.app-page .selectize-dropdown .option,
+.app-page .bootstrap-select > .dropdown-toggle,
+.app-page .bootstrap-select .dropdown-menu,
+.app-page .bootstrap-select .dropdown-menu .dropdown-item,
+.app-page .bootstrap-select .dropdown-menu li a {
+  font-size: var(--app-dropdown-font-size) !important;
+  line-height: var(--app-dropdown-line-height);
+}
+
+/* Global compact dropdown control sizing + vertical text centering. */
+.app-page select.form-control,
+.app-page select.form-select,
+.app-page .bootstrap-select > .dropdown-toggle {
+  min-height: var(--app-dropdown-control-height) !important;
+  height: var(--app-dropdown-control-height) !important;
+  line-height: calc(var(--app-dropdown-control-height) - (2 * var(--app-dropdown-control-padding-y))) !important;
+  padding-top: var(--app-dropdown-control-padding-y) !important;
+  padding-bottom: var(--app-dropdown-control-padding-y) !important;
+}
+
+/* Selectize single-value controls: keep compact height and center content/arrow. */
+.app-page .selectize-control.single .selectize-input {
+  min-height: var(--app-dropdown-control-height) !important;
+  height: var(--app-dropdown-control-height) !important;
+  padding-top: var(--app-dropdown-control-padding-y) !important;
+  padding-bottom: var(--app-dropdown-control-padding-y) !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.app-page .selectize-control.single .selectize-input > .item,
+.app-page .selectize-control.single .selectize-input > input {
+  line-height: calc(var(--app-dropdown-control-height) - (2 * var(--app-dropdown-control-padding-y))) !important;
+}
+.app-page .selectize-control.single .selectize-input:after {
+  top: 50% !important;
+  margin-top: -3px !important;
+}
+
+/* ---------- Cards ---------- */
+.card{
+  background:var(--card);
+  border:0;
+  border-radius:12px;
+  padding:20px;
+  margin:20px 0;
+  box-shadow:0 1px 2px rgba(0,0,0,0.04);
+}
+.card ul, .callout ul{ padding-left:1.2rem; margin-top:6px; margin-bottom:6px; }
+.card li, .callout li{ margin:4px 0; line-height:1.5; }
+
+/* ---------- Callouts ---------- */
+.content-wrap .callout,
+.app-page .callout{
+  border-left:4px solid; padding:14px 18px; background:white; line-height:1.5;
+  box-shadow:0 1px 2px rgba(0,0,0,0.05); border-radius:0; margin:24px 0; display:flow-root;
+}
+.callout h4{ font-size:1.4em; font-weight:500; margin-top:0; }
+.content-wrap .callout-title,
+.app-page .callout-title{ font-weight:600; font-size:1.25rem; margin-bottom:8px;
+  display:flex; align-items:center; gap:8px; }
+.content-wrap .callout-title .icon,
+.app-page .callout-title .icon{ font-size:1.15em; line-height:1; }
+.content-wrap .callout.info,
+.app-page .callout.info{    border-left-color:#3b82f6; background:#eff6ff; }
+.content-wrap .callout.warn,
+.app-page .callout.warn{    border-left-color:#f59e0b; background:#fffbeb; }
+.content-wrap .callout.success,
+.app-page .callout.success{ border-left-color:#16a34a; background:#ecfdf5; }
+.content-wrap .callout.neutral,
+.app-page .callout.neutral{ border-left-color:#cbd5e1; background:#f8fafc; }
+.content-wrap .callout p,
+.app-page .callout p{ margin:0 0 6px 0; }
+.content-wrap .callout p:last-child,
+.app-page .callout p:last-child{ margin-bottom:0; }
+.content-wrap .callout ul,
+.app-page .callout ul{ margin:0 0 0 1.1rem; }
+.content-wrap .callout li,
+.app-page .callout li{ margin:3px 0; }
+
+.content-wrap .well,
+.content-wrap .panel,
+.content-wrap .panel-body,
+.content-wrap .card{ border-radius:0; }
+
+.content-wrap .section-title,
+.app-page .section-title{ margin:28px 0 12px; }
+.content-wrap .callout + .callout,
+.app-page .callout + .callout{ margin-top:24px; }
+.content-wrap .section-title + .callout,
+.app-page .section-title + .callout{ margin-top:16px; }
+
+/* ---------- Steps ---------- */
+.steps-container{ display:flex; flex-direction:column; }
+.step{
+  display:grid; grid-template-columns:48px 1fr; gap:12px; align-items:center;
+  padding:16px 0; border-bottom:1px dashed var(--line);
+}
+.step:last-child{ border-bottom:none; }
+.step-dot{
+  width:48px; height:48px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:#f2f4f7; color:#4b5563; font-weight:700; font-size:1.5rem; line-height:1;
+}
+.step-dot.muted{ background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
+.step-text h4{ margin:0; font-size:1.55rem; font-weight:600; }
+.step-text p{ margin:2px 0 0; color:#555; }
+
+/* ---------- Footer ---------- */
+.footer{
+  border-top:1px solid var(--line);
+  background:var(--bg-soft);
+  padding:16px 20px;
+  margin-top:auto;
+  flex-shrink:0;
+}
+.footer-inner{
+  max-width:1200px;
+  margin:0 auto;
+  text-align:center;
+  font-size:0.9rem;
+  color:var(--muted);
+}
+.footer-inner a{ color:var(--muted); text-decoration:none; }
+.footer-inner a:hover{ color:var(--brand-accent); text-decoration:underline; }
+
+/* ---------- Utility ---------- */
+.busy-overlay{ background-color:rgba(255,255,255,0.3); }
+
+/* ---------- Body/tab backgrounds ---------- */
+.tab-content,
+.tab-pane,
+.main-container{ background:transparent; }
+
+.bslib-page-fill{ background:var(--bg); }
+
+/* Let fill-layout main pane use full horizontal space (avoid inherited shell caps). */
+.bslib-page-fill > .bslib-sidebar-layout > .main{
+  max-width: none;
+}
+
+/* Plotting pages: remove any remaining tab-shell width clamp in bslib fill layouts. */
+.bslib-page-fill > .bslib-sidebar-layout > .main > .tab-content{
+  width: 100%;
+  max-width: none;
+}
+
+.bslib-page-fill > .bslib-sidebar-layout > .main > .tab-content > .tab-pane.html-fill-item.html-fill-container:has(> .app-page.plotting-page){
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.bslib-page-fill > .bslib-sidebar-layout > .main > .tab-content > .tab-pane.html-fill-item.html-fill-container:has(> .app-page.plotting-page) > .app-page.plotting-page{
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* ---------- Global Tabset Style ---------- */
+:root{
+  --app-tab-text: #111111;
+  --app-tab-text-hover: #000000;
+  --app-tab-text-active: #ffffff;
+  --app-tab-border: #d1d9e6;
+  --app-tab-hover-bg: #f8fafc;
+  --app-tab-active-bg: #374151;
+  --app-tab-min-width: 150px;
+  --app-tab-max-width: 340px;
+  --app-dropdown-font-size: 0.88rem;
+  --app-dropdown-line-height: 1.25;
+  --app-dropdown-control-height: 36px;
+  --app-dropdown-control-padding-y: 5px;
+}
+
+/* ---------- Shared Lock Overlay Style ---------- */
+.analysis-selector-overlay-wrap{
+  position: relative;
+}
+.analysis-selector-overlay-link{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px;
+  text-align:center;
+  text-decoration:none !important;
+  border-radius:12px;
+  background:rgba(255,255,255,0.58);
+}
+.analysis-selector-overlay-link:hover,
+.analysis-selector-overlay-link:focus{
+  text-decoration:none !important;
+  background:rgba(255,255,255,0.70);
+}
+.analysis-selector-overlay-note{
+  display:inline-block;
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.97);
+  border:0;
+  color:#374151;
+  font-weight:600;
+  box-shadow:0 4px 14px rgba(15,23,42,0.08);
+}
+
+/* Never style top app navigation as tabset tabs */
+.navbar .nav,
+.navbar-nav,
+.bslib-page-navbar .nav {
+  border-bottom: none !important;
+  gap: 0 !important;
+}
+.navbar .nav-link,
+.navbar-nav .nav-link,
+.bslib-page-navbar .nav-link {
+  min-width: 0 !important;
+  max-width: none !important;
+  font-size: inherit !important;
+  border: none !important;
+  border-radius: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Apply to tabset tabs only (avoid touching top navbar) */
+.tabbable > .nav.nav-tabs,
+.tabbable > .nav.nav-pills,
+.app-tabs-wrap .nav.nav-tabs,
+.app-tabs-wrap .nav.nav-pills {
+  margin-top: 10px !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  white-space: nowrap !important;
+  gap: 4px !important;
+  margin-bottom: 8px !important;
+  border-bottom: 1px solid var(--app-tab-border) !important;
+}
+
+.tabbable > .nav.nav-tabs > li,
+.tabbable > .nav.nav-pills > li,
+.tabbable > .nav.nav-tabs > .nav-item,
+.tabbable > .nav.nav-pills > .nav-item,
+.app-tabs-wrap .nav.nav-tabs > li,
+.app-tabs-wrap .nav.nav-pills > li,
+.app-tabs-wrap .nav.nav-tabs > .nav-item,
+.app-tabs-wrap .nav.nav-pills > .nav-item {
+  display: block !important;
+  float: none !important;
+  flex: 0 1 auto !important;
+  min-width: var(--app-tab-min-width) !important;
+  max-width: var(--app-tab-max-width) !important;
+  margin-bottom: -1px;
+}
+
+.tabbable > .nav.nav-tabs > li > a,
+.tabbable > .nav.nav-pills > li > a,
+.tabbable > .nav.nav-tabs > .nav-item > a,
+.tabbable > .nav.nav-pills > .nav-item > a,
+.tabbable > .nav.nav-tabs .nav-link,
+.tabbable > .nav.nav-pills .nav-link,
+.app-tabs-wrap .nav.nav-tabs > li > a,
+.app-tabs-wrap .nav.nav-pills > li > a,
+.app-tabs-wrap .nav.nav-tabs > .nav-item > a,
+.app-tabs-wrap .nav.nav-pills > .nav-item > a,
+.app-tabs-wrap .nav.nav-tabs .nav-link,
+.app-tabs-wrap .nav.nav-pills .nav-link {
+  display: block !important;
+  width: 100% !important;
+  min-width: var(--app-tab-min-width) !important;
+  max-width: var(--app-tab-max-width) !important;
+  color: var(--app-tab-text) !important;
+  text-align: center !important;
+  font-weight: 400 !important;
+  font-size: 16px;
+  padding: 8px 12px !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px 8px 0 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.01em !important;
+}
+
+.tabbable > .nav.nav-tabs > li > a:hover,
+.tabbable > .nav.nav-pills > li > a:hover,
+.tabbable > .nav.nav-tabs > .nav-item > a:hover,
+.tabbable > .nav.nav-pills > .nav-item > a:hover,
+.tabbable > .nav.nav-tabs .nav-link:hover,
+.tabbable > .nav.nav-pills .nav-link:hover,
+.app-tabs-wrap .nav.nav-tabs > li > a:hover,
+.app-tabs-wrap .nav.nav-pills > li > a:hover,
+.app-tabs-wrap .nav.nav-tabs > .nav-item > a:hover,
+.app-tabs-wrap .nav.nav-pills > .nav-item > a:hover,
+.app-tabs-wrap .nav.nav-tabs .nav-link:hover,
+.app-tabs-wrap .nav.nav-pills .nav-link:hover {
+  color: var(--app-tab-text-hover) !important;
+  background: var(--app-tab-hover-bg) !important;
+  border-color: var(--app-tab-border) var(--app-tab-border) transparent var(--app-tab-border) !important;
+}
+
+.tabbable > .nav.nav-tabs > li.active > a,
+.tabbable > .nav.nav-tabs > li.active > a:focus,
+.tabbable > .nav.nav-tabs > li.active > a:hover,
+.tabbable > .nav.nav-pills > li.active > a,
+.tabbable > .nav.nav-pills > li.active > a:focus,
+.tabbable > .nav.nav-pills > li.active > a:hover,
+.tabbable > .nav.nav-tabs > .nav-item.active > a,
+.tabbable > .nav.nav-tabs > .nav-item.active > a:focus,
+.tabbable > .nav.nav-tabs > .nav-item.active > a:hover,
+.tabbable > .nav.nav-pills > .nav-item.active > a,
+.tabbable > .nav.nav-pills > .nav-item.active > a:focus,
+.tabbable > .nav.nav-pills > .nav-item.active > a:hover,
+.tabbable > .nav.nav-tabs .nav-link.active,
+.tabbable > .nav.nav-tabs .nav-link.active:focus,
+.tabbable > .nav.nav-tabs .nav-link.active:hover,
+.tabbable > .nav.nav-pills .nav-link.active,
+.tabbable > .nav.nav-pills .nav-link.active:focus,
+.tabbable > .nav.nav-pills .nav-link.active:hover,
+.app-tabs-wrap .nav.nav-tabs > li.active > a,
+.app-tabs-wrap .nav.nav-tabs > li.active > a:focus,
+.app-tabs-wrap .nav.nav-tabs > li.active > a:hover,
+.app-tabs-wrap .nav.nav-pills > li.active > a,
+.app-tabs-wrap .nav.nav-pills > li.active > a:focus,
+.app-tabs-wrap .nav.nav-pills > li.active > a:hover,
+.app-tabs-wrap .nav.nav-tabs > .nav-item.active > a,
+.app-tabs-wrap .nav.nav-tabs > .nav-item.active > a:focus,
+.app-tabs-wrap .nav.nav-tabs > .nav-item.active > a:hover,
+.app-tabs-wrap .nav.nav-pills > .nav-item.active > a,
+.app-tabs-wrap .nav.nav-pills > .nav-item.active > a:focus,
+.app-tabs-wrap .nav.nav-pills > .nav-item.active > a:hover,
+.app-tabs-wrap .nav.nav-tabs .nav-link.active,
+.app-tabs-wrap .nav.nav-tabs .nav-link.active:focus,
+.app-tabs-wrap .nav.nav-tabs .nav-link.active:hover,
+.app-tabs-wrap .nav.nav-pills .nav-link.active,
+.app-tabs-wrap .nav.nav-pills .nav-link.active:focus,
+.app-tabs-wrap .nav.nav-pills .nav-link.active:hover {
+  color: var(--app-tab-text-active) !important;
+  background: var(--app-tab-active-bg) !important;
+  border-color: var(--app-tab-border) var(--app-tab-border) var(--app-tab-active-bg) var(--app-tab-border) !important;
+  font-weight: 700 !important;
+}
+
+/* Auto font-fit classes are applied by app.js script */
+.tabbable > .nav.nav-tabs .app-tab-fit-sm,
+.tabbable > .nav.nav-pills .app-tab-fit-sm,
+.app-tabs-wrap .nav.nav-tabs .app-tab-fit-sm,
+.app-tabs-wrap .nav.nav-pills .app-tab-fit-sm {
+  font-size: 15px !important;
+}
+.tabbable > .nav.nav-tabs .app-tab-fit-xs,
+.tabbable > .nav.nav-pills .app-tab-fit-xs,
+.app-tabs-wrap .nav.nav-tabs .app-tab-fit-xs,
+.app-tabs-wrap .nav.nav-pills .app-tab-fit-xs {
+  font-size: 13px !important;
+}
+
+.tabbable > .tab-content,
+.app-tabs-wrap .tab-content {
+  padding-top: 22px;
+}
+
+/* Plotting pages should sit flush under navbar; remove inherited top tab-shell inset. */
+.tabbable > .tab-content:has(> .tab-pane.active .plotting-page),
+.app-tabs-wrap > .tab-content:has(> .tab-pane.active .plotting-page) {
+  padding-top: 0 !important;
+}
+
+/* Fallback for browsers/builds without :has() support:
+   offset the inherited tab-content top padding for active plotting pages. */
+@supports not selector(:has(*)) {
+  .tabbable > .tab-content > .tab-pane.active > .plotting-page,
+  .app-tabs-wrap > .tab-content > .tab-pane.active > .plotting-page {
+    margin-top: -22px;
+  }
+}
+
+/* Plotting-page internal stage tabs should not add their own top inset. */
+.tabbable:has(> .tab-content > .tab-pane.active .plotting-page) > .nav.nav-tabs,
+.tabbable:has(> .tab-content > .tab-pane.active .plotting-page) > .nav.nav-pills,
+.app-tabs-wrap:has(> .tab-content > .tab-pane.active .plotting-page) > .nav.nav-tabs,
+.app-tabs-wrap:has(> .tab-content > .tab-pane.active .plotting-page) > .nav.nav-pills {
+  margin-top: 0 !important;
+}
+
+@media (max-width: 1600px) {
+  .tabbable > .nav.nav-tabs > li > a,
+  .tabbable > .nav.nav-pills > li > a,
+  .tabbable > .nav.nav-tabs > .nav-item > a,
+  .tabbable > .nav.nav-pills > .nav-item > a,
+  .tabbable > .nav.nav-tabs .nav-link,
+  .tabbable > .nav.nav-pills .nav-link,
+  .app-tabs-wrap .nav.nav-tabs > li > a,
+  .app-tabs-wrap .nav.nav-pills > li > a,
+  .app-tabs-wrap .nav.nav-tabs > .nav-item > a,
+  .app-tabs-wrap .nav.nav-pills > .nav-item > a,
+  .app-tabs-wrap .nav.nav-tabs .nav-link,
+  .app-tabs-wrap .nav.nav-pills .nav-link {
+    font-size: 15px;
+    padding: 8px 10px !important;
+  }
+}
+
+@media (max-width: 1280px) {
+  .tabbable > .nav.nav-tabs > li > a,
+  .tabbable > .nav.nav-pills > li > a,
+  .tabbable > .nav.nav-tabs > .nav-item > a,
+  .tabbable > .nav.nav-pills > .nav-item > a,
+  .tabbable > .nav.nav-tabs .nav-link,
+  .tabbable > .nav.nav-pills .nav-link,
+  .app-tabs-wrap .nav.nav-tabs > li > a,
+  .app-tabs-wrap .nav.nav-pills > li > a,
+  .app-tabs-wrap .nav.nav-tabs > .nav-item > a,
+  .app-tabs-wrap .nav.nav-pills > .nav-item > a,
+  .app-tabs-wrap .nav.nav-tabs .nav-link,
+  .app-tabs-wrap .nav.nav-pills .nav-link {
+    font-size: 14px;
+    padding: 7px 9px !important;
+  }
+}
+
+/* Light mode: tabset as rounded button rail with sliding active highlight */
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills {
+  --app-tab-track-pad: 3px;
+  position: relative;
+  border: 0 !important;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: var(--app-tab-track-pad);
+  gap: 2px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.035), 0 2px 8px rgba(15, 23, 42, 0.018);
+}
+
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs.app-tab-pill-track::before,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills.app-tab-pill-track::before,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs.app-tab-pill-track::before,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills.app-tab-pill-track::before {
+  content: "";
+  position: absolute;
+  top: var(--app-tab-track-pad);
+  left: var(--app-tab-pill-x, var(--app-tab-track-pad));
+  width: var(--app-tab-pill-w, 0px);
+  height: calc(100% - (2 * var(--app-tab-track-pad)));
+  border-radius: 999px;
+  background: #eceff3;
+  z-index: 0;
+  transition: left 0.26s ease, width 0.26s ease;
+}
+
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > li,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > li,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > .nav-item,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > .nav-item,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > li,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > li,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > .nav-item,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > .nav-item {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0;
+}
+
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > li > a,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > li > a,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > .nav-item > a,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > .nav-item > a,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs .nav-link,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills .nav-link,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > li > a,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > li > a,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > .nav-item > a,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > .nav-item > a,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs .nav-link,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills .nav-link {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: #6b7280 !important;
+  font-weight: 500 !important;
+  min-height: 44px;
+  padding: 8px 14px !important;
+  white-space: normal !important;
+  text-align: center !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.14 !important;
+  max-height: calc(1.14em * 2 + 2px);
+  transition: color 0.18s ease, font-weight 0.18s ease;
+}
+
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > li > a:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > li > a:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > .nav-item > a:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > .nav-item > a:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs .nav-link:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills .nav-link:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > li > a:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > li > a:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > .nav-item > a:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > .nav-item > a:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs .nav-link:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills .nav-link:hover {
+  color: #111827 !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+}
+
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > li.active > a,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > li.active > a:focus,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > li.active > a:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > li.active > a,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > li.active > a:focus,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > li.active > a:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > .nav-item.active > a,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > .nav-item.active > a:focus,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs > .nav-item.active > a:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > .nav-item.active > a,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > .nav-item.active > a:focus,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills > .nav-item.active > a:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs .nav-link.active,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs .nav-link.active:focus,
+body:not(.app-dark-mode) .tabbable > .nav.nav-tabs .nav-link.active:hover,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills .nav-link.active,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills .nav-link.active:focus,
+body:not(.app-dark-mode) .tabbable > .nav.nav-pills .nav-link.active:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > li.active > a,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > li.active > a:focus,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > li.active > a:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > li.active > a,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > li.active > a:focus,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > li.active > a:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > .nav-item.active > a,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > .nav-item.active > a:focus,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs > .nav-item.active > a:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > .nav-item.active > a,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > .nav-item.active > a:focus,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills > .nav-item.active > a:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs .nav-link.active,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs .nav-link.active:focus,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-tabs .nav-link.active:hover,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills .nav-link.active,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills .nav-link.active:focus,
+body:not(.app-dark-mode) .app-tabs-wrap .nav.nav-pills .nav-link.active:hover {
+  background: transparent !important;
+  border: 0 !important;
+  color: #111827 !important;
+  font-weight: 500 !important;
+}
+
+/* Dark mode: keep identical tab geometry (padding/height/radius), only swap colors. */
+body.app-dark-mode .tabbable > .nav.nav-tabs,
+body.app-dark-mode .tabbable > .nav.nav-pills,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills {
+  --app-tab-track-pad: 3px;
+  position: relative;
+  border: 0 !important;
+  background: var(--card);
+  border-radius: 999px;
+  padding: var(--app-tab-track-pad);
+  gap: 2px !important;
+  margin-bottom: 12px !important;
+  box-shadow: none;
+}
+
+body.app-dark-mode .tabbable > .nav.nav-tabs.app-tab-pill-track::before,
+body.app-dark-mode .tabbable > .nav.nav-pills.app-tab-pill-track::before,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs.app-tab-pill-track::before,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills.app-tab-pill-track::before {
+  content: "";
+  position: absolute;
+  top: var(--app-tab-track-pad);
+  left: var(--app-tab-pill-x, var(--app-tab-track-pad));
+  width: var(--app-tab-pill-w, 0px);
+  height: calc(100% - (2 * var(--app-tab-track-pad)));
+  border-radius: 999px;
+  background: #2f3640;
+  z-index: 0;
+  transition: left 0.26s ease, width 0.26s ease;
+}
+
+body.app-dark-mode .tabbable > .nav.nav-tabs > li,
+body.app-dark-mode .tabbable > .nav.nav-pills > li,
+body.app-dark-mode .tabbable > .nav.nav-tabs > .nav-item,
+body.app-dark-mode .tabbable > .nav.nav-pills > .nav-item,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > li,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > li,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > .nav-item,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > .nav-item {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0;
+}
+
+body.app-dark-mode .tabbable > .nav.nav-tabs > li > a,
+body.app-dark-mode .tabbable > .nav.nav-pills > li > a,
+body.app-dark-mode .tabbable > .nav.nav-tabs > .nav-item > a,
+body.app-dark-mode .tabbable > .nav.nav-pills > .nav-item > a,
+body.app-dark-mode .tabbable > .nav.nav-tabs .nav-link,
+body.app-dark-mode .tabbable > .nav.nav-pills .nav-link,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > li > a,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > li > a,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > .nav-item > a,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > .nav-item > a,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs .nav-link,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills .nav-link {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: #9ca3af !important;
+  font-weight: 500 !important;
+  min-height: 44px;
+  padding: 8px 14px !important;
+  white-space: normal !important;
+  text-align: center !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.14 !important;
+  max-height: calc(1.14em * 2 + 2px);
+  transition: color 0.18s ease, font-weight 0.18s ease;
+}
+
+body.app-dark-mode .tabbable > .nav.nav-tabs > li > a:hover,
+body.app-dark-mode .tabbable > .nav.nav-pills > li > a:hover,
+body.app-dark-mode .tabbable > .nav.nav-tabs > .nav-item > a:hover,
+body.app-dark-mode .tabbable > .nav.nav-pills > .nav-item > a:hover,
+body.app-dark-mode .tabbable > .nav.nav-tabs .nav-link:hover,
+body.app-dark-mode .tabbable > .nav.nav-pills .nav-link:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > li > a:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > li > a:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > .nav-item > a:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > .nav-item > a:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs .nav-link:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills .nav-link:hover {
+  color: #e5e7eb !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+}
+
+body.app-dark-mode .tabbable > .nav.nav-tabs > li.active > a,
+body.app-dark-mode .tabbable > .nav.nav-tabs > li.active > a:focus,
+body.app-dark-mode .tabbable > .nav.nav-tabs > li.active > a:hover,
+body.app-dark-mode .tabbable > .nav.nav-pills > li.active > a,
+body.app-dark-mode .tabbable > .nav.nav-pills > li.active > a:focus,
+body.app-dark-mode .tabbable > .nav.nav-pills > li.active > a:hover,
+body.app-dark-mode .tabbable > .nav.nav-tabs > .nav-item.active > a,
+body.app-dark-mode .tabbable > .nav.nav-tabs > .nav-item.active > a:focus,
+body.app-dark-mode .tabbable > .nav.nav-tabs > .nav-item.active > a:hover,
+body.app-dark-mode .tabbable > .nav.nav-pills > .nav-item.active > a,
+body.app-dark-mode .tabbable > .nav.nav-pills > .nav-item.active > a:focus,
+body.app-dark-mode .tabbable > .nav.nav-pills > .nav-item.active > a:hover,
+body.app-dark-mode .tabbable > .nav.nav-tabs .nav-link.active,
+body.app-dark-mode .tabbable > .nav.nav-tabs .nav-link.active:focus,
+body.app-dark-mode .tabbable > .nav.nav-tabs .nav-link.active:hover,
+body.app-dark-mode .tabbable > .nav.nav-pills .nav-link.active,
+body.app-dark-mode .tabbable > .nav.nav-pills .nav-link.active:focus,
+body.app-dark-mode .tabbable > .nav.nav-pills .nav-link.active:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > li.active > a,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > li.active > a:focus,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > li.active > a:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > li.active > a,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > li.active > a:focus,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > li.active > a:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > .nav-item.active > a,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > .nav-item.active > a:focus,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs > .nav-item.active > a:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > .nav-item.active > a,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > .nav-item.active > a:focus,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills > .nav-item.active > a:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs .nav-link.active,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs .nav-link.active:focus,
+body.app-dark-mode .app-tabs-wrap .nav.nav-tabs .nav-link.active:hover,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills .nav-link.active,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills .nav-link.active:focus,
+body.app-dark-mode .app-tabs-wrap .nav.nav-pills .nav-link.active:hover {
+  background: transparent !important;
+  border: 0 !important;
+  color: #f3f4f6 !important;
+  font-weight: 500 !important;
+}
+
+/* ---------- Width & stability ---------- */
+/* Keep tabs full width, but do not override Bootstrap row width math. */
+.tab-content, .tab-pane { width:100%; }
+.row { width:auto; }
+[class*="col-"] { min-width:0; }
+
+/* Make all common Shiny outputs block-level and span the row */
+.shiny-plot-output,
+.shiny-html-output,
+.shiny-text-output,
+.plotly,
+.html-widget,
+.datatables,
+.dataTables_wrapper,
+.shiny-output-error,
+.shiny-output-error:empty,
+.shiny-spinner-output-container{
+  display:block;
+  width:100%;
+  min-width:0;
+}
+
+/* shinycssloaders wrapper should span full row even before content arrives */
+.load-container{ display:block; width:100%; }
+.load-container > :not(.load-overlay){ width:100%; }
+
+/* Stable placeholder heights so empty areas don’t look collapsed */
+.shiny-plot-output,
+.plotly,
+.html-widget{ min-height:260px; }
+
+/* DataTables should size to content; do not reserve fixed vertical space. */
+.datatables,
+.dataTables_wrapper{ min-height:0; }
+
+/* Big panels: Doublet & QC viewer */
+#dbl_umap_plot,
+#dbl_confocal_plot,
+.qc-plot-area,
+.qc-viewer{
+  width:100%;
+  min-height:520px;
+}
+
+/* Tables/widgets shouldn’t force horizontal scroll */
+.dataTables_wrapper,
+.datatables{ overflow-x:auto; }
+table.dataTable{ width:100%; }
+
+/* ---------- Global DataTable density ---------- */
+.dataTables_wrapper table.dataTable {
+  table-layout: auto !important;
+}
+
+.dataTables_wrapper table.dataTable thead th {
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.18;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.dataTables_wrapper table.dataTable tbody td {
+  font-size: 0.84rem;
+  line-height: 1.2;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Override DT nowrap helpers so long tokens (including underscores) can wrap. */
+.dataTables_wrapper table.dataTable.nowrap th,
+.dataTables_wrapper table.dataTable.nowrap td,
+.dataTables_wrapper table.dataTable td.dt-body-nowrap,
+.dataTables_wrapper table.dataTable th.dt-body-nowrap {
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_length label,
+.dataTables_wrapper .dataTables_filter label,
+.dataTables_wrapper .dataTables_paginate {
+  font-size: 0.82rem;
+}
+
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+  font-size: 0.82rem;
+  height: 30px;
+  padding: 3px 6px;
+}
+
+/* Keep left panels from visually collapsing */
+.well, .panel{ min-height:0; }
+/* ---------- Page title sizing ---------- */
+.page-header { margin-top: 2px; margin-bottom: 12px; }
+.page-header h1,
+.page-header h2,
+.page-header .h1,
+.page-header .h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--page-title-icon-gap);
+  font-size: var(--page-title-size);
+  font-weight: 700;
+  line-height: var(--page-title-line-h);
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+.page-header h1 .fa,
+.page-header h2 .fa,
+.app-page > .container-fluid > .row > .col-sm-12 > h2 .fa {
+  width: 1.18em;
+  min-width: 1.18em;
+  text-align: center;
+  margin-right: 0;
+}
+
+.page-header:has(h1 .fa),
+.page-header:has(h2 .fa) {
+  --page-title-sub-indent: calc(1.18em + var(--page-title-icon-gap));
+}
+
+.page-header p {
+  line-height: var(--page-title-sub-line-h);
+  font-size: 0.95rem;
+  margin-top: 0;
+  margin-left: var(--page-title-sub-indent, 0);
+  color: #5a6472;
+}
+
+/* ---------- Card-page title system (global source of truth) ---------- */
+.app-page .card-page-header {
+  padding: 0 0 0 var(--page-title-left-offset);
+  margin-top: 2px;
+  margin-bottom: 12px;
+}
+
+/* Keep plotting-page title card aligned with the same card grid baseline. */
+.app-page.plotting-page .card-page-header {
+  padding: 0 0 0 14px;
+  margin: 6px 0 10px 0;
+}
+
+.card-page-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.card-page-title .fa {
+  width: 1.18em;
+  min-width: 1.18em;
+  text-align: center;
+  margin-right: 0;
+}
+
+.card-page-title {
+  display: flex;
+  align-items: center;
+  gap: var(--page-title-icon-gap);
+  color: #1f2937;
+  line-height: var(--page-title-line-h);
+  letter-spacing: -0.01em;
+}
+
+.card-page-title-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-page-title .fas,
+.card-page-title .far,
+.card-page-title .fab,
+.card-page-title .fa-solid,
+.card-page-title .fa-regular,
+.card-page-title .fa-brands,
+.card-page-title svg.svg-inline--fa {
+  width: 1.18em;
+  min-width: 1.18em;
+  text-align: center;
+  margin-right: 0;
+}
+
+.card-page-header-title {
+  font-size: var(--page-title-size) !important;
+  font-weight: 700 !important;
+}
+
+.card-page-card-title {
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+}
+
+.card-page-header:has(.card-page-title .fa) {
+  --card-page-title-sub-indent: calc(1.18em + var(--page-title-icon-gap));
+}
+
+.card-page-header:has(.card-page-title .fas),
+.card-page-header:has(.card-page-title .far),
+.card-page-header:has(.card-page-title .fab),
+.card-page-header:has(.card-page-title .fa-solid),
+.card-page-header:has(.card-page-title .fa-regular),
+.card-page-header:has(.card-page-title .fa-brands),
+.card-page-header:has(.card-page-title svg.svg-inline--fa) {
+  --card-page-title-sub-indent: calc(1.18em + var(--page-title-icon-gap));
+}
+
+.card-page-header .card-page-subtitle {
+  font-size: 0.95rem;
+  line-height: var(--page-title-sub-line-h);
+  color: #5a6472;
+  margin-top: 0;
+  margin-left: var(--card-page-title-sub-indent, 0);
+}
+h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+/* ---------- Global page shell/card system ---------- */
+.app-page > .container-fluid{
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom);
+  margin-top: 0;
+  box-shadow: none;
+}
+
+/* Plotting pages: no extra top inset so sticky left panels can sit flush to navbar. */
+.plotting-page > .container-fluid{
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Plotting pages use .wl-side cards with 14px inner text inset. */
+.plotting-page{
+  --page-title-left-offset: 14px;
+}
+
+/* Plotting pages share one global width model (no per-page exceptions). */
+.app-page.plotting-page > .container-fluid{
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Keep active plotting tab pane top-anchored without overriding Bootstrap tab visibility. */
+.app-page.plotting-page .tab-pane.active.html-fill-container{
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-content: flex-start !important;
+  align-items: stretch !important;
+}
+
+/* In fill-tab flex panes, keep immediate content wrappers full-width (no shrink-to-content). */
+.app-page.plotting-page .tab-pane.active.html-fill-container > *{
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  align-self: stretch !important;
+}
+
+/* Tabset wrappers on plotting pages must always occupy full available row width. */
+.app-page.plotting-page .tabbable,
+.app-page.plotting-page .tabbable > .tab-content,
+.app-page.plotting-page .tabbable > .tab-content > .tab-pane{
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.app-page .page-header,
+.app-page .header-row{
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 0 var(--page-title-left-offset);
+  margin: 6px 0 10px 0;
+  box-shadow: none;
+}
+
+/* Tighten title-to-first-content spacing globally without changing regular card rhythm. */
+.app-page .page-header + .card,
+.app-page .header-row + .card,
+.app-page .page-header + .row .card,
+.app-page .header-row + .row .card {
+  margin-top: 8px;
+}
+
+/* Align unboxed text blocks with boxed content text baseline */
+.app-page > .container-fluid > h3,
+.app-page > .container-fluid > h4,
+.app-page > .container-fluid > p,
+.app-page > .container-fluid > ul,
+.app-page > .container-fluid > ol,
+.app-page .tab-pane > h3,
+.app-page .tab-pane > h4,
+.app-page .tab-pane > p,
+.app-page .tab-pane > ul,
+.app-page .tab-pane > ol {
+  margin-left: var(--page-title-left-offset);
+}
+
+/* Legacy titlePanel() support: keep plain title (no card) */
+.app-page > .container-fluid > .row > .col-sm-12 > h2{
+  display: block;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 0 var(--page-title-left-offset);
+  margin: 6px 0 10px 0;
+  box-shadow: none;
+}
+
+/* Use cards as section separators instead of long horizontal rules */
+.app-page hr{
+  border-top-color: transparent;
+  margin: 10px 0;
+}
+
+.app-page .well,
+.app-page .panel,
+.app-page .card{
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* Global ribbon (alert) system: consistent spacing + keep semantic colors. */
+.app-page .alert{
+  margin: 6px 0 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+.app-page .alert-info{
+  background-color: #3d95cf;
+  border-color: #3d95cf;
+  color: #ffffff;
+}
+.app-page .alert-danger{
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: #ffffff;
+}
+
+/* Requested reusable emphasis styles */
+.app-page .focus_card_style{
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.24), 0 6px 14px rgba(34, 197, 94, 0.16);
+}
+
+.plotting-page .plotting-left-panel{
+  height: auto;
+  max-height: none;
+  overflow-y: visible;
+  overflow-x: visible;
+  padding-right: 0;
+  position: static;
+  top: auto;
+  align-self: stretch;
+  margin-bottom: 0;
+}
+
+/* Shiny sidebarPanel() may inject form.well or div.well/panel wrappers.
+   Neutralize that wrapper so only the inner .wl-side is the visible card. */
+.plotting-page .plotting-left-panel > form.well,
+.plotting-page .plotting-left-panel > .well,
+.plotting-page .plotting-left-panel > .panel{
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Float the left panel when left side is taller than plot side. */
+.plotting-page.float-left-panel .plotting-left-panel{
+  height: calc(100dvh - var(--nav-h) - var(--footer-h) - (2 * var(--plotting-float-gap-y)));
+  max-height: calc(100dvh - var(--nav-h) - var(--footer-h) - (2 * var(--plotting-float-gap-y)));
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+}
+
+/* Float the plot area when plot side is taller than left side. */
+.plotting-page.float-plot-area .plot_area_card_style{
+  height: calc(100dvh - var(--nav-h) - var(--footer-h) - (2 * var(--plotting-float-gap-y)));
+  max-height: calc(100dvh - var(--nav-h) - var(--footer-h) - (2 * var(--plotting-float-gap-y)));
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+}
+
+/* Only the floating side should own the vertical scrollbar. */
+.plotting-page.float-left-panel .plot_area_card_style{
+  overflow: visible;
+}
+
+.plotting-page.float-plot-area .plotting-left-panel{
+  overflow-y: visible;
+  overflow-x: visible;
+  position: static;
+  top: auto;
+  align-self: stretch;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Left control rail: no border outline */
+.plotting-page .plotting-left-panel{
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.plotting-page .plotting-left-panel .wl-side{
+  background: var(--card);
+  border: 0 !important;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05) !important;
+}
+
+.plotting-page .plotting-left-panel .wl-side:last-child{
+  margin-bottom: 0 !important;
+}
+
+@media (max-width: 991px){
+  .plotting-page .plotting-left-panel{
+    position: static;
+    top: auto;
+    align-self: stretch;
+  }
+}
+
+.app-page .important_card_style{
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.24), 0 6px 14px rgba(239, 68, 68, 0.16);
+}
+
+/* Shared beta badge (yellow rounded square/pill) */
+.beta-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 6px;
+  padding: 2px 9px;
+  border-radius: 8px;
+  border: 1px solid #facc15;
+  background: #fef08a;
+  color: #713f12;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  vertical-align: middle;
+}
+
+.beta-badge .beta-badge__icon{
+  font-size: 0.78em;
+  line-height: 1;
+}
+
+.alpha-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 6px;
+  padding: 2px 9px;
+  border-radius: 8px;
+  border: 1px solid #ef4444;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  vertical-align: middle;
+}
+
+.alpha-badge .alpha-badge__icon{
+  font-size: 0.78em;
+  line-height: 1;
+}
+
+/* Left control panels are structural, not emphasis targets. */
+.plotting-page .plotting-left-panel.focus_card_style,
+.plotting-page .plotting-left-panel.important_card_style{
+  border: 1px solid var(--card-border);
+  box-shadow: none;
+}
+
+/* Plot area card with no visual fill, fixed viewport height and scroll */
+.app-page .plot_area_card_style{
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Keep a clear gutter between left controls and inner plotting cards. */
+.plotting-page .plot_area_card_style{
+  padding: 0 14px 14px 12px;
+  display: grid;
+  row-gap: 12px;
+  align-content: start;
+}
+
+@media (max-width: 991px){
+  .plotting-page .plot_area_card_style{
+    padding: 0 0 12px 0;
+  }
+}
+
+/* Keep legacy bootstrap boxes neutral inside restored plot area wrapper. */
+.plotting-page .plot_area_card_style .well,
+.plotting-page .plot_area_card_style .panel{
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+/* No nested visual boxing inside main plot cards. */
+.plotting-page .plot_area_card_style .wl-side .card,
+.plotting-page .plot_area_card_style .wl-side .well,
+.plotting-page .plot_area_card_style .wl-side .panel{
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Plot sections inside plotting area should be the visible cards. */
+.plotting-page .plot_area_card_style .wl-side{
+  background: var(--card);
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 10px 34px rgba(15, 23, 42, 0.035), 0 2px 8px rgba(15, 23, 42, 0.018);
+  padding: 12px 14px;
+  margin: 0;
+}
+
+/* Global containment: prevent inner plots/widgets from exceeding card width. */
+.app-page .wl-side,
+.app-page .card,
+.app-page .well,
+.app-page .panel,
+.plotting-page .plot_area_card_style,
+.plotting-page .plot_area_card_style > .wl-side{
+  min-width: 0;
+  max-width: 100%;
+}
+
+.plotting-page .plot_area_card_style > .wl-side > .row,
+.plotting-page .plot_area_card_style > .wl-side [class*='col-']{
+  min-width: 0;
+}
+
+/* Grid-item safety: prevent anonymous wrappers (e.g. margin-top div around code card)
+   from expanding the whole right panel width via long preformatted code lines. */
+.plotting-page .plot_area_card_style > *{
+  min-width: 0;
+  max-width: 100%;
+}
+
+.plotting-page .plot_area_card_style .shiny-plot-output,
+.plotting-page .plot_area_card_style .plotly,
+.plotting-page .plot_area_card_style .html-widget,
+.plotting-page .plot_area_card_style .shiny-spinner-output-container,
+body.figure-studio-active .app-page .shiny-plot-output,
+body.figure-studio-active .app-page .plotly,
+body.figure-studio-active .app-page .html-widget,
+body.figure-studio-active .app-page .shiny-spinner-output-container{
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Advanced analysis full-width guard:
+   prevent tab/row/card wrappers from collapsing plot cards below available plot area width. */
+.plotting-page .plot_area_card_style > .row,
+.plotting-page .plot_area_card_style .row{
+  width: 100%;
+  max-width: 100%;
+}
+
+.plotting-page .plot_area_card_style > .row > .col-12,
+.plotting-page .plot_area_card_style > .row > .col-sm-12,
+.plotting-page .plot_area_card_style > .row > .col-md-12,
+.plotting-page .plot_area_card_style > .row > .col-lg-12,
+.plotting-page .plot_area_card_style > .row > [class*='col-12']{
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+.plotting-page .plot_area_card_style .card{
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.plotting-page .plot_area_card_style > .wl-side:last-child{
+  margin-bottom: 0;
+}
+
+/* Figure code card width guards */
+.wl-figure-code-card,
+.wl-figure-code-scroll,
+.wl-figure-code-scroll .rds-code-block-wrap{
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Standard not-ready placeholder for plot cards across pages. */
+.plot-card-not-ready{
+  width: 100%;
+  margin: 0;
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+}
+
+/* Figure Studio preview: keep rendered plot centered and scaled to fit card. */
+.figure-preview-stage{
+  width: 100%;
+  height: calc(100dvh - var(--nav-h) - var(--footer-h) - 210px);
+  min-height: 360px;
+  max-height: calc(100dvh - var(--nav-h) - var(--footer-h) - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.figure-preview-frame{
+  transform-origin: center center;
+  margin: 0 auto;
+  will-change: transform;
+}
+
+.figure-preview-frame .figure-load-wrap{
+  width: 100%;
+  height: 100%;
+}
+
+.figure-preview-frame .shiny-plot-output{
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Figure Studio desktop layout:
+   keep left controls fixed-width while right preview takes remaining space. */
+@media (min-width: 992px){
+  body.figure-studio-active .plotting-page > .container-fluid > .row{
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+
+  body.figure-studio-active .plotting-page .plotting-left-panel.col-sm-4{
+    float: none;
+    flex: 0 0 clamp(420px, 30vw, 520px);
+    width: clamp(420px, 30vw, 520px);
+    max-width: clamp(420px, 30vw, 520px);
+  }
+
+  body.figure-studio-active .plotting-page .plot_area_card_style.col-sm-8{
+    float: none;
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 991px){
+  .figure-preview-stage{
+    min-height: 300px;
+    height: 64vh;
+    max-height: none;
+  }
+}
+
+body.app-dark-mode .plotting-page .plot_area_card_style{
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+body.app-dark-mode .app-page .card,
+body.app-dark-mode .app-page .wl-side,
+body.app-dark-mode .app-page .well,
+body.app-dark-mode .app-page .panel{
+  background: var(--card);
+  border-color: var(--card-border);
+  color: var(--fg);
+}
+
+body.app-dark-mode .plotting-page .plotting-left-panel .wl-side{
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
+}
+
+body.app-dark-mode .app-page .form-control,
+body.app-dark-mode .app-page .selectize-input,
+body.app-dark-mode .app-page .selectize-dropdown{
+  background: #1a1f26;
+  border-color: var(--card-border);
+  color: var(--fg);
+}
+
+/* QC + Analysis shared template contract */
+.plotting-page > .container-fluid > .row:first-child + p{
+  padding-left: 10px;
+  margin-top: -2px;
+  margin-bottom: 10px;
+}
+
+.plotting-page .qc-subtitle{
+  margin-top: 0;
+}
+
+/* Plotting page section titles: smaller but bold for visual consistency */
+.plotting-page .wl-side h4{
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 4px;
+  margin-bottom: 10px;
+  color: #374151;
+}
+
+body.app-dark-mode .plotting-page .wl-side h4{
+  color: #d1d5db;
+}
+
+/* Shared compact notes under controls/cards */
+.control-note{
+  font-size: var(--control-note-font-size);
+  line-height: var(--control-note-line-height);
+  margin-top: var(--control-note-margin-top);
+  margin-bottom: var(--control-note-margin-bottom);
+  color: var(--muted);
+}
+
+/* Left-panel control spacing: tighten control->note without negative margins. */
+.plotting-page .plotting-left-panel .wl-side .shiny-input-container{
+  margin-bottom: 4px;
+}
+
+.control-note p{
+  margin: 0;
+}
+
+.control-note strong{
+  font-weight: 700;
+}
+
+.cellchat-plot-card .control-note{
+  margin-top: 2px;
+  margin-bottom: 8px;
+}
+
+/* ---------- Figure Studio canvas (theme-aware) ---------- */
+body.figure-studio-active {
+  --studio-bg: var(--bg);
+  --studio-panel: var(--card);
+  --studio-panel-soft: var(--bg-soft);
+  --studio-border: var(--card-border);
+  --studio-fg: var(--fg);
+  --studio-muted: var(--muted);
+  --studio-scroll-track: #d8d8d8;
+  --studio-scroll-thumb: #a8a8a8;
+  --studio-scroll-thumb-hover: #8e8e8e;
+}
+
+body.app-dark-mode.figure-studio-active {
+  --studio-bg: #0f0f0f;
+  --studio-panel: #1c1c1c;
+  --studio-panel-soft: #161616;
+  --studio-border: transparent;
+  --studio-fg: #e6e6e6;
+  --studio-muted: #b6b6b6;
+  --studio-scroll-track: #1b1c1f;
+  --studio-scroll-thumb: #4d4f57;
+  --studio-scroll-thumb-hover: #62646d;
+}
+
+body.figure-studio-active .bslib-page-fill > .bslib-sidebar-layout > .main,
+body.figure-studio-active .tab-content,
+body.figure-studio-active .tab-pane.active,
+body.figure-studio-active .app-page,
+body.figure-studio-active .app-page > .container-fluid {
+  background: var(--studio-bg);
+  background-image: none;
+  color: var(--studio-fg);
+}
+
+/* Eliminate frame around Figure Studio canvas */
+body.figure-studio-active {
+  background: var(--studio-bg) !important;
+}
+
+body.figure-studio-active .bslib-page-fill,
+body.figure-studio-active .bslib-page-fill > .bslib-sidebar-layout {
+  background: var(--studio-bg) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.figure-studio-active .bslib-page-fill > .bslib-sidebar-layout > .main {
+  background: var(--studio-bg) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+body.figure-studio-active .bslib-page-fill > .bslib-sidebar-layout > .main > .tab-content {
+  background: var(--studio-bg) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.figure-studio-active .bslib-page-fill .container-fluid {
+  width: 100% !important;
+  max-width: var(--app-max-width) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 15px !important;
+  padding-right: 15px !important;
+  background: var(--studio-bg) !important;
+}
+
+body.figure-studio-active .tab-content {
+  background: var(--studio-bg) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  padding-top: 0 !important;
+}
+
+body.figure-studio-active .tab-pane.active {
+  background: var(--studio-bg) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+body.figure-studio-active .app-page {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.figure-studio-active .app-page > .container-fluid {
+  background: var(--studio-bg) !important;
+  margin-top: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
+  max-width: var(--app-max-width) !important;
+  padding: var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom) !important;
+}
+
+body.figure-studio-active .footer,
+body.figure-studio-active .footer-inner {
+  background: var(--studio-bg) !important;
+  color: var(--studio-muted) !important;
+  border-top-color: var(--studio-border) !important;
+}
+
+body.figure-studio-active .footer a,
+body.figure-studio-active .footer-inner a {
+  color: var(--studio-muted) !important;
+}
+
+body.figure-studio-active .footer a:hover,
+body.figure-studio-active .footer-inner a:hover {
+  color: var(--studio-fg) !important;
+}
+
+body.figure-studio-active .app-page .well,
+body.figure-studio-active .app-page .panel,
+body.figure-studio-active .app-page .card,
+body.figure-studio-active .app-page .sidebar-panel,
+body.figure-studio-active .app-page .main-panel {
+  background: var(--studio-panel);
+  border-color: var(--studio-border);
+  color: var(--studio-fg);
+  box-shadow: none;
+}
+
+/* Figure lab cards: shared styles (replaces page-inline hardcoded CSS). */
+body.figure-studio-active .app-page .lab-hero,
+body.figure-studio-active .app-page .poline-hero {
+  border: 1px solid var(--studio-border);
+  border-radius: 12px;
+  background: var(--studio-panel-soft);
+  color: var(--studio-fg);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+body.figure-studio-active .app-page .lab-hero h3,
+body.figure-studio-active .app-page .lab-hero p,
+body.figure-studio-active .app-page .poline-hero h3,
+body.figure-studio-active .app-page .poline-hero p {
+  color: var(--studio-fg) !important;
+}
+
+body.figure-studio-active .app-page .poline-credit,
+body.figure-studio-active .app-page .poline-credit a {
+  color: var(--studio-muted) !important;
+}
+
+body.figure-studio-active .app-page .lab-card,
+body.figure-studio-active .app-page .poline-card {
+  border: 1px solid var(--studio-border);
+  border-radius: 12px;
+  background: var(--studio-panel) !important;
+  color: var(--studio-fg) !important;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+}
+
+body.figure-studio-active .app-page .lab-card h4,
+body.figure-studio-active .app-page .poline-card h4 {
+  margin-top: 0;
+  color: var(--studio-fg);
+}
+
+body.figure-studio-active .app-page .lab-controls .btn {
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+
+body.figure-studio-active .app-page .lab-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+body.figure-studio-active .app-page .poline-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+body.figure-studio-active .app-page .lab-chip,
+body.figure-studio-active .app-page .poline-chip {
+  border-radius: 8px;
+  border: 1px solid var(--studio-border);
+}
+
+body.figure-studio-active .app-page .lab-chip {
+  width: 58px;
+  height: 26px;
+}
+
+body.figure-studio-active .app-page .poline-chip {
+  height: 28px;
+}
+
+body.figure-studio-active .app-page .lab-code,
+body.figure-studio-active .app-page .poline-code {
+  max-height: 260px;
+  overflow: auto;
+  background: var(--studio-panel-soft) !important;
+  border: 1px solid var(--studio-border) !important;
+  color: var(--studio-fg) !important;
+  border-radius: 8px;
+  padding: 10px;
+  font-family: Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+body.figure-studio-active .app-page .lab-muted-note,
+body.figure-studio-active .app-page .poline-muted {
+  margin: 4px 0 8px 0;
+  color: var(--studio-muted);
+  font-size: 0.85rem;
+}
+
+body.app-dark-mode.figure-studio-active .app-page .motion-color-picker .mcp-shell,
+body.app-dark-mode.figure-studio-active .app-page .curve-color-picker .ccp-shell {
+  background: radial-gradient(circle at 30% 20%, #16191f 0%, #0f1217 60%, #0a0d12 100%) !important;
+  border-color: var(--studio-border) !important;
+}
+
+body.figure-studio-active .app-page p,
+body.figure-studio-active .app-page label,
+body.figure-studio-active .app-page .help-block,
+body.figure-studio-active .app-page .control-label,
+body.figure-studio-active .app-page .radio,
+body.figure-studio-active .app-page .checkbox,
+body.figure-studio-active .app-page em {
+  color: var(--studio-fg);
+}
+
+/* Keep muted helper notes readable in Figure Studio dark mode. */
+body.app-dark-mode.figure-studio-active .app-page .text-muted,
+body.app-dark-mode.figure-studio-active .app-page .help-block.text-muted,
+body.app-dark-mode.figure-studio-active .app-page p.text-muted {
+  color: var(--studio-muted) !important;
+}
+
+/* Do not leak Figure Studio text palette into generic app modals (Help/Admin/etc). */
+body.figure-studio-active .modal:not(.figure-modal-dark-dialog) .modal-title,
+body.figure-studio-active .modal:not(.figure-modal-dark-dialog) .modal-content,
+body.figure-studio-active .modal:not(.figure-modal-dark-dialog) .modal-body,
+body.figure-studio-active .modal:not(.figure-modal-dark-dialog) .modal-body p,
+body.figure-studio-active .modal:not(.figure-modal-dark-dialog) .modal-body label,
+body.figure-studio-active .modal:not(.figure-modal-dark-dialog) .modal-body .help-block {
+  color: #1f2937 !important;
+}
+
+body.figure-studio-active .modal:not(.figure-modal-dark-dialog) .modal-body .text-muted {
+  color: #6b7280 !important;
+}
+
+/* Keep global title sizing/spacing; only adjust figure title color. */
+body.figure-studio-active .app-page .page-header h1,
+body.figure-studio-active .app-page .page-header h2,
+body.figure-studio-active .app-page .page-header .h1,
+body.figure-studio-active .app-page .page-header .h2,
+body.figure-studio-active .app-page > .container-fluid > .row > .col-sm-12 > h2,
+body.figure-studio-active .app-page > .container-fluid > h3 {
+  color: var(--studio-fg);
+}
+
+body.figure-studio-active .app-page hr {
+  border-top-color: var(--studio-border);
+}
+
+body.app-dark-mode.figure-studio-active .app-page .form-control,
+body.app-dark-mode.figure-studio-active .app-page .selectize-input,
+body.app-dark-mode.figure-studio-active .app-page .selectize-dropdown,
+body.app-dark-mode.figure-studio-active .app-page .irs-line,
+body.app-dark-mode.figure-studio-active .app-page .irs-single,
+body.app-dark-mode.figure-studio-active .app-page .irs-grid-text {
+  background: #1d1e20;
+  border-color: #3a3b40;
+  color: var(--studio-fg);
+}
+
+body.app-dark-mode.figure-studio-active .app-page .btn,
+body.app-dark-mode.figure-studio-active .app-page .btn-default,
+body.app-dark-mode.figure-studio-active .app-page .btn-primary,
+body.app-dark-mode.figure-studio-active .app-page .btn-outline-secondary,
+body.app-dark-mode.figure-studio-active .app-page .btn-success {
+  background: #35363b;
+  border-color: #474950;
+  color: #f3f4f6;
+}
+
+body.app-dark-mode.figure-studio-active .app-page .btn:hover,
+body.app-dark-mode.figure-studio-active .app-page .btn-default:hover,
+body.app-dark-mode.figure-studio-active .app-page .btn-primary:hover,
+body.app-dark-mode.figure-studio-active .app-page .btn-outline-secondary:hover,
+body.app-dark-mode.figure-studio-active .app-page .btn-success:hover {
+  background: #3f4147;
+  border-color: #5a5d66;
+  color: #f9fafb;
+}
+
+body.app-dark-mode.figure-studio-active .app-page .btn:focus,
+body.app-dark-mode.figure-studio-active .app-page .btn:focus-visible,
+body.app-dark-mode.figure-studio-active .app-page .btn.focus,
+body.app-dark-mode.figure-studio-active .app-page .btn:active:focus,
+body.app-dark-mode.figure-studio-active .app-page .btn:active:focus-visible,
+body.app-dark-mode.figure-studio-active .app-page .btn-default:focus,
+body.app-dark-mode.figure-studio-active .app-page .btn-primary:focus,
+body.app-dark-mode.figure-studio-active .app-page .btn-success:focus,
+body.app-dark-mode.figure-studio-active .app-page .btn-outline-secondary:focus {
+  outline: none;
+  box-shadow: none !important;
+}
+
+body.app-dark-mode.figure-studio-active .app-page .form-control:focus,
+body.app-dark-mode.figure-studio-active .app-page .form-control:focus-visible,
+body.app-dark-mode.figure-studio-active .app-page .selectize-input.focus,
+body.app-dark-mode.figure-studio-active .app-page .selectize-input:focus,
+body.app-dark-mode.figure-studio-active .app-page .selectize-control.single .selectize-input.input-active {
+  outline: none;
+  box-shadow: none !important;
+  border-color: #575962;
+}
+
+body.figure-studio-active .tab-pane.active > .container-fluid,
+body.figure-studio-active .tab-pane.active .app-page > .container-fluid {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Smooth transition when entering/exiting Figure Studio dark mode. */
+.bslib-page-fill > .bslib-sidebar-layout > .main,
+.tab-content,
+.tab-pane,
+.app-page,
+.app-page > .container-fluid,
+.app-page .well,
+.app-page .panel,
+.app-page .card,
+.app-page .sidebar-panel,
+.app-page .main-panel {
+  transition: background-color 220ms ease, color 180ms ease, border-color 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bslib-page-fill > .bslib-sidebar-layout > .main,
+  .tab-content,
+  .tab-pane,
+  .app-page,
+  .app-page > .container-fluid,
+  .app-page .well,
+  .app-page .panel,
+  .app-page .card,
+  .app-page .sidebar-panel,
+  .app-page .main-panel {
+    transition: none;
+  }
+}
+
+/* Figure Studio scrollbar */
+body.figure-studio-active {
+  scrollbar-width: thin;
+  scrollbar-color: var(--studio-scroll-thumb) var(--studio-scroll-track);
+}
+
+body.figure-studio-active ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+body.figure-studio-active ::-webkit-scrollbar-track {
+  background: var(--studio-scroll-track);
+}
+
+body.figure-studio-active ::-webkit-scrollbar-thumb {
+  background-color: var(--studio-scroll-thumb);
+  border-radius: 8px;
+  border: 2px solid var(--studio-scroll-track);
+}
+
+body.figure-studio-active ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--studio-scroll-thumb-hover);
+}
+
+/* ==========================================================================
+   Force Neutral Grayscale Theme (FlowJo parity with Single-Cell shell)
+   ========================================================================== */
+:root {
+  --fg: #232323;
+  --muted: #666666;
+  --line: #d9d9d9;
+  --brand: #2f2f2f;
+  --brand-accent: #4a4a4a;
+  --bg: #f2f2f2;
+  --bg-soft: #ececec;
+  --card: #f7f7f7;
+  --pill: #e7e7e7;
+}
+
+body.app-dark-mode {
+  --bg: #0f0f0f;
+  --bg-soft: #171717;
+  --card: #1f1f1f;
+  --fg: #e3e3e3;
+  --muted: #b0b0b0;
+  --line: #313131;
+  --brand: #262626;
+  --brand-accent: #8f8f8f;
+  --pill: #2a2a2a;
+}
+
+body,
+.bslib-page-fill,
+.container-fluid,
+.content-wrap,
+.app-page,
+.app-page.plotting-page,
+.tab-content,
+.tab-pane {
+  background: var(--bg) !important;
+  color: var(--fg);
+}
+
+.app-page .card,
+.app-page .wl-side,
+.app-page .well,
+.app-page .panel,
+.app-page .card-page-card,
+.plotting-page .plotting-left-panel .wl-side,
+.plotting-page .plot_area_card_style {
+  background: var(--card) !important;
+  border-color: var(--line) !important;
+  color: var(--fg) !important;
+}
+
+body.app-dark-mode .app-page .card,
+body.app-dark-mode .app-page .wl-side,
+body.app-dark-mode .app-page .well,
+body.app-dark-mode .app-page .panel,
+body.app-dark-mode .app-page .card-page-card,
+body.app-dark-mode .plotting-page .plotting-left-panel .wl-side,
+body.app-dark-mode .plotting-page .plot_area_card_style {
+  background: var(--card) !important;
+  border-color: var(--line) !important;
+  color: var(--fg) !important;
+}
+
+/* Remove non-grayscale alert/callout colors */
+.app-page .alert-warning,
+.app-page .alert-info,
+.app-page .alert-success,
+.app-page .alert-danger,
+.app-page .callout.warn,
+.app-page .callout.info,
+.app-page .callout.success,
+.app-page .callout.neutral {
+  background: #e6e6e6 !important;
+  border-color: #bcbcbc !important;
+  color: #1f1f1f !important;
+  border-left-color: #9f9f9f !important;
+}
+
+body.app-dark-mode .app-page .alert-warning,
+body.app-dark-mode .app-page .alert-info,
+body.app-dark-mode .app-page .alert-success,
+body.app-dark-mode .app-page .alert-danger,
+body.app-dark-mode .app-page .callout.warn,
+body.app-dark-mode .app-page .callout.info,
+body.app-dark-mode .app-page .callout.success,
+body.app-dark-mode .app-page .callout.neutral {
+  background: #262626 !important;
+  border-color: #3c3c3c !important;
+  color: #e3e3e3 !important;
+  border-left-color: #666666 !important;
+}
+
+/* ==========================================================================
+   Correction: preserve single-cell white surfaces in light mode
+   ========================================================================== */
+body:not(.app-dark-mode) .tab-content,
+body:not(.app-dark-mode) .tab-pane,
+body:not(.app-dark-mode) .content-wrap,
+body:not(.app-dark-mode) .container-fluid {
+  background: transparent !important;
+}
+
+body:not(.app-dark-mode) .app-page .card,
+body:not(.app-dark-mode) .app-page .wl-side,
+body:not(.app-dark-mode) .app-page .well,
+body:not(.app-dark-mode) .app-page .panel,
+body:not(.app-dark-mode) .app-page .card-page-card,
+body:not(.app-dark-mode) .plotting-page .plotting-left-panel .wl-side,
+body:not(.app-dark-mode) .plotting-page .plot_area_card_style {
+  background: #ffffff !important;
+  border-color: #e8e8e8 !important;
+  color: #2a2a2a !important;
+}
+
+/* ==========================================================================
+   Correction: keep note/callout color coding (restore single-cell behavior)
+   ========================================================================== */
+.content-wrap .callout.info,
+.app-page .callout.info,
+.app-page .alert-info {
+  border-left-color: #3b82f6 !important;
+  background: #eff6ff !important;
+  border-color: #93c5fd !important;
+  color: #1e3a8a !important;
+}
+
+.content-wrap .callout.warn,
+.app-page .callout.warn,
+.app-page .alert-warning {
+  border-left-color: #f59e0b !important;
+  background: #fffbeb !important;
+  border-color: #fcd34d !important;
+  color: #92400e !important;
+}
+
+.content-wrap .callout.success,
+.app-page .callout.success,
+.app-page .alert-success {
+  border-left-color: #16a34a !important;
+  background: #ecfdf5 !important;
+  border-color: #86efac !important;
+  color: #166534 !important;
+}
+
+.content-wrap .callout.neutral,
+.app-page .callout.neutral {
+  border-left-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+.app-page .alert-danger {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #991b1b !important;
+}
+
+body.app-dark-mode .content-wrap .callout.info,
+body.app-dark-mode .app-page .callout.info,
+body.app-dark-mode .app-page .alert-info {
+  background: #1b2a3a !important;
+  border-color: #375a7f !important;
+  border-left-color: #60a5fa !important;
+  color: #dbeafe !important;
+}
+
+body.app-dark-mode .content-wrap .callout.warn,
+body.app-dark-mode .app-page .callout.warn,
+body.app-dark-mode .app-page .alert-warning {
+  background: #3a2c14 !important;
+  border-color: #7c5a1e !important;
+  border-left-color: #f59e0b !important;
+  color: #fde68a !important;
+}
+
+body.app-dark-mode .content-wrap .callout.success,
+body.app-dark-mode .app-page .callout.success,
+body.app-dark-mode .app-page .alert-success {
+  background: #163024 !important;
+  border-color: #2e6b4f !important;
+  border-left-color: #22c55e !important;
+  color: #dcfce7 !important;
+}
+
+body.app-dark-mode .app-page .alert-danger {
+  background: #3b1f1f !important;
+  border-color: #7f3b3b !important;
+  color: #fecaca !important;
+}
+
+/* ==========================================================================
+   Final correction: match Single-Cell light background exactly (white)
+   ========================================================================== */
+:root {
+  --fg:#2a2a2a;
+  --muted:#6b7280;
+  --line:#e8e8e8;
+  --brand:#111827;
+  --brand-accent:#4f46e5;
+  --bg:#ffffff;
+  --bg-soft:#fafafa;
+  --card:#ffffff;
+  --card-border:transparent;
+  --pill:#eef2ff;
+}
+
+body:not(.app-dark-mode),
+body:not(.app-dark-mode) .bslib-page-fill,
+body:not(.app-dark-mode) .app-page,
+body:not(.app-dark-mode) .app-page.plotting-page {
+  background: #ffffff !important;
+}
+
+body:not(.app-dark-mode) .app-page .card,
+body:not(.app-dark-mode) .app-page .wl-side,
+body:not(.app-dark-mode) .app-page .well,
+body:not(.app-dark-mode) .app-page .panel,
+body:not(.app-dark-mode) .app-page .card-page-card,
+body:not(.app-dark-mode) .plotting-page .plotting-left-panel .wl-side,
+body:not(.app-dark-mode) .plotting-page .plot_area_card_style {
+  background: #ffffff !important;
+  border-color: transparent !important;
+}
+
+/* ==========================================================================
+   Dark Mode Hard Guard: neutral grayscale for non-note, non-button surfaces
+   ========================================================================== */
+body.app-dark-mode {
+  --bg: #0f0f0f;
+  --bg-soft: #171717;
+  --card: #1f1f1f;
+  --fg: #e5e5e5;
+  --muted: #b3b3b3;
+  --line: #333333;
+  --brand: #2a2a2a;
+  --brand-accent: #8f8f8f;
+  --pill: #262626;
+}
+
+body.app-dark-mode .app-page,
+body.app-dark-mode .app-page p,
+body.app-dark-mode .app-page span,
+body.app-dark-mode .app-page label,
+body.app-dark-mode .app-page li,
+body.app-dark-mode .app-page td,
+body.app-dark-mode .app-page th,
+body.app-dark-mode .app-page h1,
+body.app-dark-mode .app-page h2,
+body.app-dark-mode .app-page h3,
+body.app-dark-mode .app-page h4,
+body.app-dark-mode .app-page h5,
+body.app-dark-mode .app-page h6 {
+  color: var(--fg) !important;
+}
+
+body.app-dark-mode .app-page .text-muted,
+body.app-dark-mode .app-page .help-block,
+body.app-dark-mode .app-page .small,
+body.app-dark-mode .app-page small {
+  color: var(--muted) !important;
+}
+
+body.app-dark-mode .app-page a:not(.btn):not(.dropdown-item):not(.nav-link) {
+  color: #c9c9c9 !important;
+}
+
+body.app-dark-mode .app-page a:not(.btn):not(.dropdown-item):not(.nav-link):hover {
+  color: #f0f0f0 !important;
+}
+
+body.app-dark-mode .app-page .form-control,
+body.app-dark-mode .app-page .form-select,
+body.app-dark-mode .app-page .selectize-input,
+body.app-dark-mode .app-page .selectize-dropdown,
+body.app-dark-mode .app-page .selectize-dropdown .option,
+body.app-dark-mode .app-page .irs-line,
+body.app-dark-mode .app-page .irs-single,
+body.app-dark-mode .app-page .irs-grid-text {
+  background: var(--pill) !important;
+  border-color: var(--line) !important;
+  color: var(--fg) !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout.sidebar-right > .sidebar {
+  background-color: #1a1a1a !important;
+  border-left-color: #333333 !important;
+  color: var(--fg) !important;
+}
+
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .form-control,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .form-select,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .selectize-input,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .selectize-dropdown,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar table.dataTable,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar table.dataTable th,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar table.dataTable td,
+body.app-dark-mode .bslib-sidebar-layout > .sidebar .dataTables_wrapper .dataTables_scrollBody {
+  background: #242424 !important;
+  border-color: #3a3a3a !important;
+  color: var(--fg) !important;
+}
+
+/* Keep note/callout palettes intact (explicitly exempt from neutral text override). */
+body.app-dark-mode .app-page .callout.info,
+body.app-dark-mode .app-page .callout.warn,
+body.app-dark-mode .app-page .callout.success,
+body.app-dark-mode .app-page .callout.neutral,
+body.app-dark-mode .app-page .alert-info,
+body.app-dark-mode .app-page .alert-warning,
+body.app-dark-mode .app-page .alert-success,
+body.app-dark-mode .app-page .alert-danger {
+  color: inherit !important;
+}
+
+body.app-dark-mode .app-page .callout.info *,
+body.app-dark-mode .app-page .callout.warn *,
+body.app-dark-mode .app-page .callout.success *,
+body.app-dark-mode .app-page .callout.neutral *,
+body.app-dark-mode .app-page .alert-info *,
+body.app-dark-mode .app-page .alert-warning *,
+body.app-dark-mode .app-page .alert-success *,
+body.app-dark-mode .app-page .alert-danger * {
+  color: inherit !important;
+}

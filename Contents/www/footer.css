@@ -1,0 +1,72 @@
+/* Footer Styles */
+.footer {
+  border-top: 1px solid #d7d7d7;
+  background: #efefef;
+  padding: 6px 8px;
+  margin-top: auto;
+  text-align: center;
+  color: #5f6368;
+  font-size: 0.70rem;
+  line-height: 1.2;
+  width: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.footer-inner {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  overflow: hidden;
+  margin: 0 auto;
+  padding: 0 2px;
+  box-sizing: border-box;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  min-width: max-content;
+}
+
+.footer-inner span,
+.footer-inner a {
+  font-size: 0.62rem;
+  white-space: nowrap !important;
+  flex: 0 0 auto;
+}
+
+.footer-inner a {
+  color: #4f565c;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.footer-inner a:hover {
+  color: #1f2937;
+  text-decoration: underline;
+}
+
+.footer-policy {
+  white-space: nowrap;
+}
+
+/* Dark mode footer parity */
+body.app-dark-mode .footer {
+  border-top: 1px solid #2f2f2f;
+  background: #171717;
+  color: #a5a5a5;
+}
+
+body.app-dark-mode .footer-inner,
+body.app-dark-mode .footer-inner span {
+  color: #a5a5a5;
+}
+
+body.app-dark-mode .footer-inner a {
+  color: #c0c0c0;
+}
+
+body.app-dark-mode .footer-inner a:hover {
+  color: #f0f0f0;
+}
