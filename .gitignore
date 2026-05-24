@@ -1,0 +1,19 @@
+# macOS / Windows noise
+.DS_Store
+Thumbs.db
+
+# R session artifacts
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# Local app/runtime artifacts
+launch_mac.app/
+package_libraries/
+python_envs/
+run_log.txt
+
+# Common temp/cache files
+*.tmp
+*.temp
