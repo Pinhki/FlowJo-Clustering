@@ -1,0 +1,4 @@
+path,role
+Contents/app.R,main_shiny_entry
+Contents/global.R,global_setup
+Contents/run.R,launcher
