@@ -1,0 +1,13 @@
+page,file,relation,functions_or_notes
+page_navbar,Contents/R/interface/components/component_navbar.R,nav_reference,
+page_compensation,Contents/R/interface/page_compensation.R,page_file,compensation_page_ui
+page_feature,Contents/R/interface/page_feature.R,page_file,
+page_flowsom,Contents/R/interface/page_flowsom.R,page_file,
+page_gating,Contents/R/interface/page_gating.R,page_file,gating_page_ui
+page_gating_concat,Contents/R/interface/page_gating_concat.R,page_file,flowjo_pipeline_page_ui
+page_import,Contents/R/interface/page_import.R,page_file,
+page_import_export,Contents/R/interface/page_import_export.R,page_file,import_export_page_ui
+page_layout_editor,Contents/R/interface/page_layout_editor.R,page_file,layout_editor_page_ui
+page_statistics,Contents/R/interface/page_statistics.R,page_file,statistics_page_ui
+page_umap_flowsom,Contents/R/interface/page_umap_flowsom.R,page_file,
+page_workspace,Contents/R/interface/page_workspace.R,page_file,workspace_page_ui

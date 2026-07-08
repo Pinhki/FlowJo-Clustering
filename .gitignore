@@ -17,3 +17,8 @@ run_log.txt
 # Common temp/cache files
 *.tmp
 *.temp
+# CocoIndex Code (ccc)
+/.cocoindex_code/
+
+# macOS
+.DS_Store

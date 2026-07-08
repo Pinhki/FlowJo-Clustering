@@ -1,0 +1,6 @@
+file,asset_reference
+Contents/R/interface/components/component_footer.R,footer.css
+Contents/R/interface/components/component_navbar.R,custom_bslib.css
+Contents/R/interface/components/component_navbar.R,global.css
+Contents/R/interface/components/component_navbar.R,navbar.css
+Contents/R/interface/page_gating.R,gating_canvas.js

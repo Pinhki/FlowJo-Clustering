@@ -1,0 +1,502 @@
+file,line,type,name,snippet
+Contents/R/global/shared_store.R,244,reactive,reactive,gate_stats <- reactive({
+Contents/R/global/shared_store.R,329,reactive,reactive,population_table <- reactive({
+Contents/R/interface/components/component_right_sidebar.R,56,input,selected_fcs_id,"observeEvent(input$selected_fcs_id, {"
+Contents/R/interface/components/component_right_sidebar.R,56,observeEvent,observeEvent,"observeEvent(input$selected_fcs_id, {"
+Contents/R/interface/components/component_right_sidebar.R,57,input,selected_fcs_id,"selected_fcs_id(as.character(input$selected_fcs_id %||% """"))"
+Contents/R/interface/components/component_right_sidebar.R,60,input,selected_population_id,"observeEvent(input$selected_population_id, {"
+Contents/R/interface/components/component_right_sidebar.R,60,observeEvent,observeEvent,"observeEvent(input$selected_population_id, {"
+Contents/R/interface/components/component_right_sidebar.R,61,input,selected_population_id,"selected_population_id(as.character(input$selected_population_id %||% """"))"
+Contents/R/interface/components/component_right_sidebar.R,64,reactive,reactive,selected_id <- reactive({
+Contents/R/interface/components/component_right_sidebar.R,71,output,fcs_registry_cards,output$fcs_registry_cards <- renderUI({
+Contents/R/interface/components/component_right_sidebar.R,71,render,renderUI,output$fcs_registry_cards <- renderUI({
+Contents/R/interface/components/component_right_sidebar.R,118,output,population_basket,output$population_basket <- renderUI({
+Contents/R/interface/components/component_right_sidebar.R,118,render,renderUI,output$population_basket <- renderUI({
+Contents/R/interface/components/component_right_sidebar.R,135,input,edit_population,"observeEvent(input$edit_population, {"
+Contents/R/interface/components/component_right_sidebar.R,135,observeEvent,observeEvent,"observeEvent(input$edit_population, {"
+Contents/R/interface/components/component_right_sidebar.R,149,input,save_population,"observeEvent(input$save_population, {"
+Contents/R/interface/components/component_right_sidebar.R,149,observeEvent,observeEvent,"observeEvent(input$save_population, {"
+Contents/R/interface/components/component_right_sidebar.R,151,input,pop_include,"shared$populations$update(id, include = input$pop_include, label = trimws(input$pop_label %||% """"), set_name = trimws(input$pop_set %||% ""Population Set""), volume_uL = input$pop_vo"
+Contents/R/interface/components/component_right_sidebar.R,151,input,pop_label,"shared$populations$update(id, include = input$pop_include, label = trimws(input$pop_label %||% """"), set_name = trimws(input$pop_set %||% ""Population Set""), volume_uL = input$pop_vo"
+Contents/R/interface/components/component_right_sidebar.R,151,input,pop_set,"shared$populations$update(id, include = input$pop_include, label = trimws(input$pop_label %||% """"), set_name = trimws(input$pop_set %||% ""Population Set""), volume_uL = input$pop_vo"
+Contents/R/interface/components/component_right_sidebar.R,151,input,pop_volume,"shared$populations$update(id, include = input$pop_include, label = trimws(input$pop_label %||% """"), set_name = trimws(input$pop_set %||% ""Population Set""), volume_uL = input$pop_vo"
+Contents/R/interface/components/component_right_sidebar.R,155,input,remove_population,"observeEvent(input$remove_population, {"
+Contents/R/interface/components/component_right_sidebar.R,155,observeEvent,observeEvent,"observeEvent(input$remove_population, {"
+Contents/R/interface/components/component_right_sidebar.R,160,input,fcs_file,"observeEvent(input$fcs_file, {"
+Contents/R/interface/components/component_right_sidebar.R,160,observeEvent,observeEvent,"observeEvent(input$fcs_file, {"
+Contents/R/interface/components/component_right_sidebar.R,161,input,fcs_file,req(input$fcs_file)
+Contents/R/interface/components/component_right_sidebar.R,162,input,fcs_file,files <- input$fcs_file
+Contents/R/interface/components/component_right_sidebar.R,226,input,btn_set_active,"observeEvent(input$btn_set_active, {"
+Contents/R/interface/components/component_right_sidebar.R,226,observeEvent,observeEvent,"observeEvent(input$btn_set_active, {"
+Contents/R/interface/components/component_right_sidebar.R,233,input,btn_remove,"observeEvent(input$btn_remove, {"
+Contents/R/interface/components/component_right_sidebar.R,233,observeEvent,observeEvent,"observeEvent(input$btn_remove, {"
+Contents/R/interface/components/component_right_sidebar.R,240,input,btn_rename,"observeEvent(input$btn_rename, {"
+Contents/R/interface/components/component_right_sidebar.R,240,observeEvent,observeEvent,"observeEvent(input$btn_rename, {"
+Contents/R/interface/components/component_right_sidebar.R,254,input,confirm_rename,"observeEvent(input$confirm_rename, {"
+Contents/R/interface/components/component_right_sidebar.R,254,observeEvent,observeEvent,"observeEvent(input$confirm_rename, {"
+Contents/R/interface/components/component_right_sidebar.R,256,input,rename_value,"req(id, input$rename_value)"
+Contents/R/interface/components/component_right_sidebar.R,257,input,rename_value,nm <- trimws(input$rename_value)
+Contents/R/interface/components/component_right_sidebar.R,264,input,btn_edit_notes,"observeEvent(input$btn_edit_notes, {"
+Contents/R/interface/components/component_right_sidebar.R,264,observeEvent,observeEvent,"observeEvent(input$btn_edit_notes, {"
+Contents/R/interface/components/component_right_sidebar.R,278,input,confirm_notes,"observeEvent(input$confirm_notes, {"
+Contents/R/interface/components/component_right_sidebar.R,278,observeEvent,observeEvent,"observeEvent(input$confirm_notes, {"
+Contents/R/interface/components/component_right_sidebar.R,281,input,notes_value,"shared$fcs$set_notes(id, input$notes_value %||% """")"
+Contents/R/interface/components/component_right_sidebar.R,286,input,load_state_btn,"observeEvent(input$load_state_btn, {"
+Contents/R/interface/components/component_right_sidebar.R,286,observeEvent,observeEvent,"observeEvent(input$load_state_btn, {"
+Contents/R/interface/components/component_right_sidebar.R,302,output,save_state,output$save_state <- downloadHandler(
+Contents/R/interface/components/component_right_sidebar.R,307,input,load_state,"observeEvent(input$load_state, {"
+Contents/R/interface/components/component_right_sidebar.R,307,observeEvent,observeEvent,"observeEvent(input$load_state, {"
+Contents/R/interface/components/component_right_sidebar.R,308,input,load_state,req(input$load_state)
+Contents/R/interface/components/component_right_sidebar.R,309,input,load_state,shared$import_state(readRDS(input$load_state$datapath))
+Contents/R/interface/components/component_right_sidebar.R,313,input,open_settings,list(open_settings = reactive(input$open_settings))
+Contents/R/interface/components/component_right_sidebar.R,313,reactive,reactive,list(open_settings = reactive(input$open_settings))
+Contents/R/interface/page_compensation.R,14,reactive,reactive,active_entry <- reactive({
+Contents/R/interface/page_compensation.R,20,output,sample_info,output$sample_info <- renderUI({
+Contents/R/interface/page_compensation.R,20,render,renderUI,output$sample_info <- renderUI({
+Contents/R/interface/page_compensation.R,25,output,spillover_table,output$spillover_table <- DT::renderDataTable({
+Contents/R/interface/page_compensation.R,25,render,renderDataTable,output$spillover_table <- DT::renderDataTable({
+Contents/R/interface/page_feature.R,23,output,gate_notice,output$gate_notice <- renderUI({
+Contents/R/interface/page_feature.R,23,render,renderUI,output$gate_notice <- renderUI({
+Contents/R/interface/page_feature.R,44,input,go_umap_tab,"observeEvent(input$go_umap_tab, {"
+Contents/R/interface/page_feature.R,44,observeEvent,observeEvent,"observeEvent(input$go_umap_tab, {"
+Contents/R/interface/page_feature.R,48,observe,observe,observe({
+Contents/R/interface/page_feature.R,54,output,feature_controls,output$feature_controls <- renderUI({
+Contents/R/interface/page_feature.R,54,render,renderUI,output$feature_controls <- renderUI({
+Contents/R/interface/page_feature.R,107,input,xvar,"observeEvent(input$xvar, shared$params$xlab(input$xvar), ignoreInit = TRUE)"
+Contents/R/interface/page_feature.R,107,input,xvar,"observeEvent(input$xvar, shared$params$xlab(input$xvar), ignoreInit = TRUE)"
+Contents/R/interface/page_feature.R,107,observeEvent,observeEvent,"observeEvent(input$xvar, shared$params$xlab(input$xvar), ignoreInit = TRUE)"
+Contents/R/interface/page_feature.R,108,input,yvar,"observeEvent(input$yvar, shared$params$ylab(input$yvar), ignoreInit = TRUE)"
+Contents/R/interface/page_feature.R,108,input,yvar,"observeEvent(input$yvar, shared$params$ylab(input$yvar), ignoreInit = TRUE)"
+Contents/R/interface/page_feature.R,108,observeEvent,observeEvent,"observeEvent(input$yvar, shared$params$ylab(input$yvar), ignoreInit = TRUE)"
+Contents/R/interface/page_feature.R,110,observe,observe,observe({
+Contents/R/interface/page_feature.R,118,input,axis_scale_type,"input$axis_scale_type %||% ""none"","
+Contents/R/interface/page_feature.R,119,input,axis_w,"input$axis_w %||% 0.5,"
+Contents/R/interface/page_feature.R,120,input,axis_p,"input$axis_p %||% 4.5,"
+Contents/R/interface/page_feature.R,121,input,axis_n,input$axis_n %||% 0
+Contents/R/interface/page_feature.R,214,output,plot,output$plot <- renderPlot({
+Contents/R/interface/page_feature.R,214,render,renderPlot,output$plot <- renderPlot({
+Contents/R/interface/page_feature.R,215,input,markers,"req(shared$df$processed(), input$markers, input$xvar, input$yvar)"
+Contents/R/interface/page_feature.R,215,input,xvar,"req(shared$df$processed(), input$markers, input$xvar, input$yvar)"
+Contents/R/interface/page_feature.R,215,input,yvar,"req(shared$df$processed(), input$markers, input$xvar, input$yvar)"
+Contents/R/interface/page_feature.R,219,input,xvar,"need(input$xvar %in% colnames(df), ""Selected X axis is not available in the active FCS.""),"
+Contents/R/interface/page_feature.R,220,input,yvar,"need(input$yvar %in% colnames(df), ""Selected Y axis is not available in the active FCS."")"
+Contents/R/interface/page_feature.R,222,input,markers,markers <- input$markers[input$markers %in% colnames(df)]
+Contents/R/interface/page_feature.R,222,input,markers,markers <- input$markers[input$markers %in% colnames(df)]
+Contents/R/interface/page_feature.R,228,input,xvar,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, sf))"
+Contents/R/interface/page_feature.R,228,input,yvar,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, sf))"
+Contents/R/interface/page_feature.R,228,render,render_one,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, sf))"
+Contents/R/interface/page_feature.R,229,input,ncol,"p <- wrap_plots(plots, ncol = input$ncol)"
+Contents/R/interface/page_feature.R,231,input,xvar,"theme_choice <- flowjo_feature_theme_choice(input$xvar, input$yvar, shared$params$plot_theme())"
+Contents/R/interface/page_feature.R,231,input,yvar,"theme_choice <- flowjo_feature_theme_choice(input$xvar, input$yvar, shared$params$plot_theme())"
+Contents/R/interface/page_feature.R,232,input,xvar,real_axes <- !(flowjo_is_embedding_axis(input$xvar) && flowjo_is_embedding_axis(input$yvar))
+Contents/R/interface/page_feature.R,232,input,yvar,real_axes <- !(flowjo_is_embedding_axis(input$xvar) && flowjo_is_embedding_axis(input$yvar))
+Contents/R/interface/page_feature.R,247,output,download_pdf,output$download_pdf <- downloadHandler(
+Contents/R/interface/page_feature.R,250,input,markers,"req(shared$df$processed(), input$markers, input$xvar, input$yvar)"
+Contents/R/interface/page_feature.R,250,input,xvar,"req(shared$df$processed(), input$markers, input$xvar, input$yvar)"
+Contents/R/interface/page_feature.R,250,input,yvar,"req(shared$df$processed(), input$markers, input$xvar, input$yvar)"
+Contents/R/interface/page_feature.R,252,input,markers,markers <- input$markers[input$markers %in% colnames(df)]
+Contents/R/interface/page_feature.R,252,input,markers,markers <- input$markers[input$markers %in% colnames(df)]
+Contents/R/interface/page_feature.R,255,input,xvar,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, input$exp_scale))"
+Contents/R/interface/page_feature.R,255,input,yvar,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, input$exp_scale))"
+Contents/R/interface/page_feature.R,255,input,exp_scale,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, input$exp_scale))"
+Contents/R/interface/page_feature.R,255,render,render_one,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, input$exp_scale))"
+Contents/R/interface/page_feature.R,256,input,ncol,"p <- wrap_plots(plots, ncol = input$ncol)"
+Contents/R/interface/page_feature.R,257,input,xvar,"theme_choice <- flowjo_feature_theme_choice(input$xvar, input$yvar, shared$params$plot_theme())"
+Contents/R/interface/page_feature.R,257,input,yvar,"theme_choice <- flowjo_feature_theme_choice(input$xvar, input$yvar, shared$params$plot_theme())"
+Contents/R/interface/page_feature.R,258,input,xvar,real_axes <- !(flowjo_is_embedding_axis(input$xvar) && flowjo_is_embedding_axis(input$yvar))
+Contents/R/interface/page_feature.R,258,input,yvar,real_axes <- !(flowjo_is_embedding_axis(input$xvar) && flowjo_is_embedding_axis(input$yvar))
+Contents/R/interface/page_feature.R,259,input,exp_scale,"p <- apply_theme(p, scale_factor = input$exp_scale, theme_choice = theme_choice,"
+Contents/R/interface/page_feature.R,262,input,exp_scale,if (isTRUE(real_axes)) p <- p + flowjo_real_axis_theme(input$exp_scale)
+Contents/R/interface/page_feature.R,263,input,exp_w,"ggsave(file, plot = p, device = ""pdf"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1, dpi = 300)"
+Contents/R/interface/page_feature.R,263,input,exp_h,"ggsave(file, plot = p, device = ""pdf"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1, dpi = 300)"
+Contents/R/interface/page_feature.R,263,input,exp_unit,"ggsave(file, plot = p, device = ""pdf"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1, dpi = 300)"
+Contents/R/interface/page_feature.R,266,output,download_svg,output$download_svg <- downloadHandler(
+Contents/R/interface/page_feature.R,269,input,markers,"req(shared$df$processed(), input$markers, input$xvar, input$yvar)"
+Contents/R/interface/page_feature.R,269,input,xvar,"req(shared$df$processed(), input$markers, input$xvar, input$yvar)"
+Contents/R/interface/page_feature.R,269,input,yvar,"req(shared$df$processed(), input$markers, input$xvar, input$yvar)"
+Contents/R/interface/page_feature.R,271,input,markers,markers <- input$markers[input$markers %in% colnames(df)]
+Contents/R/interface/page_feature.R,271,input,markers,markers <- input$markers[input$markers %in% colnames(df)]
+Contents/R/interface/page_feature.R,274,input,xvar,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, input$exp_scale))"
+Contents/R/interface/page_feature.R,274,input,yvar,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, input$exp_scale))"
+Contents/R/interface/page_feature.R,274,input,exp_scale,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, input$exp_scale))"
+Contents/R/interface/page_feature.R,274,render,render_one,"plots <- lapply(markers, function(g) render_one(g, df, input$xvar, input$yvar, input$exp_scale))"
+Contents/R/interface/page_feature.R,275,input,ncol,"p <- wrap_plots(plots, ncol = input$ncol)"
+Contents/R/interface/page_feature.R,276,input,xvar,"theme_choice <- flowjo_feature_theme_choice(input$xvar, input$yvar, shared$params$plot_theme())"
+Contents/R/interface/page_feature.R,276,input,yvar,"theme_choice <- flowjo_feature_theme_choice(input$xvar, input$yvar, shared$params$plot_theme())"
+Contents/R/interface/page_feature.R,277,input,xvar,real_axes <- !(flowjo_is_embedding_axis(input$xvar) && flowjo_is_embedding_axis(input$yvar))
+Contents/R/interface/page_feature.R,277,input,yvar,real_axes <- !(flowjo_is_embedding_axis(input$xvar) && flowjo_is_embedding_axis(input$yvar))
+Contents/R/interface/page_feature.R,278,input,exp_scale,"p <- apply_theme(p, scale_factor = input$exp_scale, theme_choice = theme_choice,"
+Contents/R/interface/page_feature.R,281,input,exp_scale,if (isTRUE(real_axes)) p <- p + flowjo_real_axis_theme(input$exp_scale)
+Contents/R/interface/page_feature.R,282,input,exp_w,"ggsave(file, plot = p, device = ""svg"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1)"
+Contents/R/interface/page_feature.R,282,input,exp_h,"ggsave(file, plot = p, device = ""svg"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1)"
+Contents/R/interface/page_feature.R,282,input,exp_unit,"ggsave(file, plot = p, device = ""svg"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1)"
+Contents/R/interface/page_flowsom.R,26,output,gate_notice,output$gate_notice <- renderUI({
+Contents/R/interface/page_flowsom.R,26,render,renderUI,output$gate_notice <- renderUI({
+Contents/R/interface/page_flowsom.R,33,input,flowsom_file,"observeEvent(input$flowsom_file, {"
+Contents/R/interface/page_flowsom.R,33,observeEvent,observeEvent,"observeEvent(input$flowsom_file, {"
+Contents/R/interface/page_flowsom.R,34,input,flowsom_file,"req(shared$df$raw(), input$flowsom_file)"
+Contents/R/interface/page_flowsom.R,36,input,flowsom_file,"fs_df <- read.csv(input$flowsom_file$datapath, check.names = FALSE)"
+Contents/R/interface/page_flowsom.R,50,output,controls,output$controls <- renderUI({
+Contents/R/interface/page_flowsom.R,50,render,renderUI,output$controls <- renderUI({
+Contents/R/interface/page_flowsom.R,76,output,color_picker_ui,output$color_picker_ui <- renderUI({
+Contents/R/interface/page_flowsom.R,76,render,renderUI,output$color_picker_ui <- renderUI({
+Contents/R/interface/page_flowsom.R,100,observe,observe,observe({
+Contents/R/interface/page_flowsom.R,110,observeEvent,observeEvent,"observeEvent(input[[paste0(""up_"", id)]],   { cur<-shared$flowsom$order(); idx<-which(cur==id); if (idx>1) shared$flowsom$order(swap(cur, idx, idx-1)) }, ignoreInit=TRUE)"
+Contents/R/interface/page_flowsom.R,111,observeEvent,observeEvent,"observeEvent(input[[paste0(""down_"", id)]], { cur<-shared$flowsom$order(); idx<-which(cur==id); if (idx<length(cur)) shared$flowsom$order(swap(cur, idx, idx+1)) }, ignoreInit=TRUE)"
+Contents/R/interface/page_flowsom.R,150,output,plot,output$plot <- renderPlot({
+Contents/R/interface/page_flowsom.R,150,render,renderPlot,output$plot <- renderPlot({
+Contents/R/interface/page_flowsom.R,151,input,xvar,"req(shared$flowsom$df(), input$xvar, input$yvar)"
+Contents/R/interface/page_flowsom.R,151,input,yvar,"req(shared$flowsom$df(), input$xvar, input$yvar)"
+Contents/R/interface/page_flowsom.R,155,input,xvar,"plot_build(df, input$xvar, input$yvar, sf)"
+Contents/R/interface/page_flowsom.R,155,input,yvar,"plot_build(df, input$xvar, input$yvar, sf)"
+Contents/R/interface/page_flowsom.R,159,output,download_pdf,output$download_pdf <- downloadHandler(
+Contents/R/interface/page_flowsom.R,162,input,xvar,"p <- plot_build(shared$flowsom$df(), input$xvar, input$yvar, input$exp_scale)"
+Contents/R/interface/page_flowsom.R,162,input,yvar,"p <- plot_build(shared$flowsom$df(), input$xvar, input$yvar, input$exp_scale)"
+Contents/R/interface/page_flowsom.R,162,input,exp_scale,"p <- plot_build(shared$flowsom$df(), input$xvar, input$yvar, input$exp_scale)"
+Contents/R/interface/page_flowsom.R,163,input,exp_w,"ggsave(file, plot = p, device = ""pdf"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1, dpi = 300)"
+Contents/R/interface/page_flowsom.R,163,input,exp_h,"ggsave(file, plot = p, device = ""pdf"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1, dpi = 300)"
+Contents/R/interface/page_flowsom.R,163,input,exp_unit,"ggsave(file, plot = p, device = ""pdf"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1, dpi = 300)"
+Contents/R/interface/page_flowsom.R,166,output,download_svg,output$download_svg <- downloadHandler(
+Contents/R/interface/page_flowsom.R,169,input,xvar,"p <- plot_build(shared$flowsom$df(), input$xvar, input$yvar, input$exp_scale)"
+Contents/R/interface/page_flowsom.R,169,input,yvar,"p <- plot_build(shared$flowsom$df(), input$xvar, input$yvar, input$exp_scale)"
+Contents/R/interface/page_flowsom.R,169,input,exp_scale,"p <- plot_build(shared$flowsom$df(), input$xvar, input$yvar, input$exp_scale)"
+Contents/R/interface/page_flowsom.R,170,input,exp_w,"ggsave(file, plot = p, device = ""svg"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1)"
+Contents/R/interface/page_flowsom.R,170,input,exp_h,"ggsave(file, plot = p, device = ""svg"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1)"
+Contents/R/interface/page_flowsom.R,170,input,exp_unit,"ggsave(file, plot = p, device = ""svg"", width = input$exp_w, height = input$exp_h, units = input$exp_unit, scale = 1)"
+Contents/R/interface/page_gating.R,77,reactive,reactive,active_entry <- reactive({
+Contents/R/interface/page_gating.R,78,input,sample_id,sid <- input$sample_id %||% shared$fcs$active_id()
+Contents/R/interface/page_gating.R,87,reactive,reactive,active_sample_id <- reactive({
+Contents/R/interface/page_gating.R,207,output,sample_picker,output$sample_picker <- renderUI({
+Contents/R/interface/page_gating.R,207,render,renderUI,output$sample_picker <- renderUI({
+Contents/R/interface/page_gating.R,213,output,group_picker,output$group_picker <- renderUI({
+Contents/R/interface/page_gating.R,213,render,renderUI,output$group_picker <- renderUI({
+Contents/R/interface/page_gating.R,219,output,active_parent,output$active_parent <- renderUI({
+Contents/R/interface/page_gating.R,219,render,renderUI,output$active_parent <- renderUI({
+Contents/R/interface/page_gating.R,226,output,axis_controls,output$axis_controls <- renderUI({
+Contents/R/interface/page_gating.R,226,render,renderUI,output$axis_controls <- renderUI({
+Contents/R/interface/page_gating.R,302,input,x_channel,"req(e, input$x_channel, input$y_channel)"
+Contents/R/interface/page_gating.R,302,input,y_channel,"req(e, input$x_channel, input$y_channel)"
+Contents/R/interface/page_gating.R,305,input,x_channel,"channel <- if (identical(axis, ""x"")) input$x_channel else input$y_channel"
+Contents/R/interface/page_gating.R,305,input,y_channel,"channel <- if (identical(axis, ""x"")) input$x_channel else input$y_channel"
+Contents/R/interface/page_gating.R,326,input,adjust_x_axis,"observeEvent(input$adjust_x_axis, open_axis_modal(""x""), ignoreInit = TRUE)"
+Contents/R/interface/page_gating.R,326,observeEvent,observeEvent,"observeEvent(input$adjust_x_axis, open_axis_modal(""x""), ignoreInit = TRUE)"
+Contents/R/interface/page_gating.R,327,input,adjust_y_axis,"observeEvent(input$adjust_y_axis, open_axis_modal(""y""), ignoreInit = TRUE)"
+Contents/R/interface/page_gating.R,327,observeEvent,observeEvent,"observeEvent(input$adjust_y_axis, open_axis_modal(""y""), ignoreInit = TRUE)"
+Contents/R/interface/page_gating.R,329,input,apply_axis,"observeEvent(input$apply_axis, {"
+Contents/R/interface/page_gating.R,329,observeEvent,observeEvent,"observeEvent(input$apply_axis, {"
+Contents/R/interface/page_gating.R,331,input,x_channel,"req(e, input$x_channel, input$y_channel)"
+Contents/R/interface/page_gating.R,331,input,y_channel,"req(e, input$x_channel, input$y_channel)"
+Contents/R/interface/page_gating.R,335,input,x_channel,"channel <- if (identical(axis, ""x"")) input$x_channel else input$y_channel"
+Contents/R/interface/page_gating.R,335,input,y_channel,"channel <- if (identical(axis, ""x"")) input$x_channel else input$y_channel"
+Contents/R/interface/page_gating.R,338,input,axis_scale_type,"input$axis_scale_type %||% ""none"","
+Contents/R/interface/page_gating.R,339,input,axis_axis_w,"input$axis_axis_w %||% 0.5,"
+Contents/R/interface/page_gating.R,340,input,axis_axis_p,"input$axis_axis_p %||% 4.5,"
+Contents/R/interface/page_gating.R,341,input,axis_axis_n,input$axis_axis_n %||% 0
+Contents/R/interface/page_gating.R,346,input,axis_range,raw_range <- sort(suppressWarnings(as.numeric(input$axis_range)))
+Contents/R/interface/page_gating.R,356,output,marker_color_picker,output$marker_color_picker <- renderUI({
+Contents/R/interface/page_gating.R,356,render,renderUI,output$marker_color_picker <- renderUI({
+Contents/R/interface/page_gating.R,358,input,display_mode,"if (is.null(e) || !identical(input$display_mode %||% ""dot"", ""marker"")) return(NULL)"
+Contents/R/interface/page_gating.R,360,input,x_channel,"selectInput(session$ns(""marker_color""), ""Marker color"", choices = axes, selected = input$x_channel %||% axes[[1]])"
+Contents/R/interface/page_gating.R,363,output,gate_toolbar,output$gate_toolbar <- renderUI({
+Contents/R/interface/page_gating.R,363,render,renderUI,output$gate_toolbar <- renderUI({
+Contents/R/interface/page_gating.R,385,observe,observe,observe({
+Contents/R/interface/page_gating.R,430,input,x_channel,"if (!identical(gate$x_channel, input$x_channel) || !identical(gate$y_channel, input$y_channel)) next"
+Contents/R/interface/page_gating.R,430,input,y_channel,"if (!identical(gate$x_channel, input$x_channel) || !identical(gate$y_channel, input$y_channel)) next"
+Contents/R/interface/page_gating.R,450,input,gate_canvas_polygon,"observeEvent(input$gate_canvas_polygon, {"
+Contents/R/interface/page_gating.R,450,observeEvent,observeEvent,"observeEvent(input$gate_canvas_polygon, {"
+Contents/R/interface/page_gating.R,451,input,gate_canvas_polygon,pts <- input$gate_canvas_polygon
+Contents/R/interface/page_gating.R,455,input,clear_polygon,"observeEvent(input$clear_polygon, polygon_points(data.frame(x = numeric(), y = numeric())))"
+Contents/R/interface/page_gating.R,455,observeEvent,observeEvent,"observeEvent(input$clear_polygon, polygon_points(data.frame(x = numeric(), y = numeric())))"
+Contents/R/interface/page_gating.R,457,reactive,reactive,preview_full_data <- reactive({
+Contents/R/interface/page_gating.R,459,input,x_channel,"req(e, input$x_channel, input$y_channel)"
+Contents/R/interface/page_gating.R,459,input,y_channel,"req(e, input$x_channel, input$y_channel)"
+Contents/R/interface/page_gating.R,461,input,x_channel,"x_col <- flowjo_channel_to_marker(e$channel_map, input$x_channel)"
+Contents/R/interface/page_gating.R,462,input,y_channel,"y_col <- flowjo_channel_to_marker(e$channel_map, input$y_channel)"
+Contents/R/interface/page_gating.R,470,reactive,reactive,preview_data <- reactive({
+Contents/R/interface/page_gating.R,478,reactive,reactive,current_geometry <- reactive({
+Contents/R/interface/page_gating.R,479,input,gate_type,"type <- input$gate_type %||% ""rectangle"""
+Contents/R/interface/page_gating.R,482,input,gate_canvas_draft,if (nrow(pts) < 3 && isTRUE(input$gate_canvas_draft$closed)) pts <- canvas_points_df(input$gate_canvas_draft$geometry$vertices)
+Contents/R/interface/page_gating.R,482,input,gate_canvas_draft,if (nrow(pts) < 3 && isTRUE(input$gate_canvas_draft$closed)) pts <- canvas_points_df(input$gate_canvas_draft$geometry$vertices)
+Contents/R/interface/page_gating.R,486,input,gate_canvas_draft,draft <- input$gate_canvas_draft
+Contents/R/interface/page_gating.R,489,input,gate_brush,b <- input$gate_brush
+Contents/R/interface/page_gating.R,494,input,gate_click,p <- input$gate_click
+Contents/R/interface/page_gating.R,496,input,quadrant_name,"return(list(x = p$x, y = p$y, quadrant = input$quadrant_name %||% ""upper_right"", curve = if (identical(type, ""curved_quadrant"")) 0.25 else 0))"
+Contents/R/interface/page_gating.R,563,output,axis_hist,output$axis_hist <- renderPlot({
+Contents/R/interface/page_gating.R,563,render,renderPlot,output$axis_hist <- renderPlot({
+Contents/R/interface/page_gating.R,566,input,x_channel,"req(axis, e, input$x_channel, input$y_channel)"
+Contents/R/interface/page_gating.R,566,input,y_channel,"req(axis, e, input$x_channel, input$y_channel)"
+Contents/R/interface/page_gating.R,567,input,x_channel,"channel <- if (identical(axis, ""x"")) input$x_channel else input$y_channel"
+Contents/R/interface/page_gating.R,567,input,y_channel,"channel <- if (identical(axis, ""x"")) input$x_channel else input$y_channel"
+Contents/R/interface/page_gating.R,571,input,axis_scale_type,"input$axis_scale_type %||% ""none"","
+Contents/R/interface/page_gating.R,572,input,axis_axis_w,"input$axis_axis_w %||% 0.5,"
+Contents/R/interface/page_gating.R,573,input,axis_axis_p,"input$axis_axis_p %||% 4.5,"
+Contents/R/interface/page_gating.R,574,input,axis_axis_n,input$axis_axis_n %||% 0
+Contents/R/interface/page_gating.R,595,input,x_channel,"req(e, geom, input$x_channel)"
+Contents/R/interface/page_gating.R,600,input,gate_type,"type = input$gate_type,"
+Contents/R/interface/page_gating.R,602,input,x_channel,"x_channel = input$x_channel,"
+Contents/R/interface/page_gating.R,603,input,y_channel,"y_channel = input$y_channel,"
+Contents/R/interface/page_gating.R,616,input,save_gate,"observeEvent(input$save_gate, {"
+Contents/R/interface/page_gating.R,616,observeEvent,observeEvent,"observeEvent(input$save_gate, {"
+Contents/R/interface/page_gating.R,617,input,gate_name,"save_gate_with_name(input$gate_name, current_geometry())"
+Contents/R/interface/page_gating.R,620,input,gate_canvas_draft,"observeEvent(input$gate_canvas_draft, {"
+Contents/R/interface/page_gating.R,620,observeEvent,observeEvent,"observeEvent(input$gate_canvas_draft, {"
+Contents/R/interface/page_gating.R,621,input,gate_canvas_draft,if (!isTRUE(input$gate_canvas_draft$closed)) return()
+Contents/R/interface/page_gating.R,624,input,gate_name,"textInput(session$ns(""polygon_gate_name""), ""Population name"", value = input$gate_name %||% ""New gate""),"
+Contents/R/interface/page_gating.R,633,input,cancel_polygon_gate,"observeEvent(input$cancel_polygon_gate, {"
+Contents/R/interface/page_gating.R,633,observeEvent,observeEvent,"observeEvent(input$cancel_polygon_gate, {"
+Contents/R/interface/page_gating.R,639,input,save_polygon_gate,"observeEvent(input$save_polygon_gate, {"
+Contents/R/interface/page_gating.R,639,observeEvent,observeEvent,"observeEvent(input$save_polygon_gate, {"
+Contents/R/interface/page_gating.R,640,input,polygon_gate_name,"save_gate_with_name(input$polygon_gate_name, current_geometry())"
+Contents/R/interface/page_gating.R,644,input,replace_gate,"observeEvent(input$replace_gate, {"
+Contents/R/interface/page_gating.R,644,observeEvent,observeEvent,"observeEvent(input$replace_gate, {"
+Contents/R/interface/page_gating.R,649,input,x_channel,"req(e, geom, gid, gates[[gid]], input$x_channel)"
+Contents/R/interface/page_gating.R,650,input,gate_name,gates[[gid]]$name <- trimws(input$gate_name %||% gates[[gid]]$name)
+Contents/R/interface/page_gating.R,651,input,gate_type,gates[[gid]]$type <- input$gate_type
+Contents/R/interface/page_gating.R,652,input,x_channel,gates[[gid]]$x_channel <- input$x_channel
+Contents/R/interface/page_gating.R,653,input,y_channel,gates[[gid]]$y_channel <- input$y_channel
+Contents/R/interface/page_gating.R,663,input,gate_canvas_geometry,"observeEvent(input$gate_canvas_geometry, {"
+Contents/R/interface/page_gating.R,663,observeEvent,observeEvent,"observeEvent(input$gate_canvas_geometry, {"
+Contents/R/interface/page_gating.R,664,input,gate_canvas_geometry,msg <- input$gate_canvas_geometry
+Contents/R/interface/page_gating.R,673,input,use_root,"observeEvent(input$use_root, shared$gating$active_gate_id(NULL), ignoreInit = TRUE)"
+Contents/R/interface/page_gating.R,673,observeEvent,observeEvent,"observeEvent(input$use_root, shared$gating$active_gate_id(NULL), ignoreInit = TRUE)"
+Contents/R/interface/page_gating.R,675,input,sync_group,"observeEvent(input$sync_group, {"
+Contents/R/interface/page_gating.R,675,observeEvent,observeEvent,"observeEvent(input$sync_group, {"
+Contents/R/interface/page_gating.R,676,input,group_id,"req(input$group_id, shared$gating$active_gate_id())"
+Contents/R/interface/page_gating.R,677,input,group_id,"shared$gating$sync_gate_to_group(shared$gating$active_gate_id(), input$group_id)"
+Contents/R/interface/page_gating.R,695,input,add_active_to_basket,"observeEvent(input$add_active_to_basket, add_gates_to_basket(shared$gating$active_gate_id()), ignoreInit = TRUE)"
+Contents/R/interface/page_gating.R,695,observeEvent,observeEvent,"observeEvent(input$add_active_to_basket, add_gates_to_basket(shared$gating$active_gate_id()), ignoreInit = TRUE)"
+Contents/R/interface/page_gating.R,697,reactive,reactive,canvas_payload <- reactive({
+Contents/R/interface/page_gating.R,700,input,display_mode,"mode <- input$display_mode %||% ""dot"""
+Contents/R/interface/page_gating.R,701,input,marker_color,"marker_col <- flowjo_channel_to_marker(pd$entry$channel_map, input$marker_color %||% input$x_channel)"
+Contents/R/interface/page_gating.R,701,input,x_channel,"marker_col <- flowjo_channel_to_marker(pd$entry$channel_map, input$marker_color %||% input$x_channel)"
+Contents/R/interface/page_gating.R,703,input,x_channel,"groups <- if (identical(mode, ""gate"") && length(gates)) as.character(flowjo_gate_plot_groups(pd$df, pd$entry$channel_map, gates, input$x_channel, input$y_channel)) else rep(""Ungate"
+Contents/R/interface/page_gating.R,703,input,y_channel,"groups <- if (identical(mode, ""gate"") && length(gates)) as.character(flowjo_gate_plot_groups(pd$df, pd$entry$channel_map, gates, input$x_channel, input$y_channel)) else rep(""Ungate"
+Contents/R/interface/page_gating.R,708,input,x_channel,"if (!identical(g$x_channel, input$x_channel) || !identical(g$y_channel, input$y_channel)) return(NULL)"
+Contents/R/interface/page_gating.R,708,input,y_channel,"if (!identical(g$x_channel, input$x_channel) || !identical(g$y_channel, input$y_channel)) return(NULL)"
+Contents/R/interface/page_gating.R,717,input,x_channel,"if (is.null(scale_overrides[[pd$x_col]]) && grepl(""^(FSC|SSC)"", input$x_channel %||% """", ignore.case = TRUE)) x_rng[1] <- 0"
+Contents/R/interface/page_gating.R,718,input,y_channel,"if (is.null(scale_overrides[[pd$y_col]]) && grepl(""^(FSC|SSC)"", input$y_channel %||% """", ignore.case = TRUE)) y_rng[1] <- 0"
+Contents/R/interface/page_gating.R,729,input,gate_type,"tool = input$gate_type %||% ""rectangle"","
+Contents/R/interface/page_gating.R,739,input,x_channel,"labels = list(x = flowjo_channel_label(pd$entry$channel_map, input$x_channel), y = flowjo_channel_label(pd$entry$channel_map, input$y_channel))"
+Contents/R/interface/page_gating.R,739,input,y_channel,"labels = list(x = flowjo_channel_label(pd$entry$channel_map, input$x_channel), y = flowjo_channel_label(pd$entry$channel_map, input$y_channel))"
+Contents/R/interface/page_gating.R,743,observe,observe,observe({
+Contents/R/interface/page_gating.R,747,input,gate_canvas_request,"observeEvent(input$gate_canvas_request, {"
+Contents/R/interface/page_gating.R,747,observeEvent,observeEvent,"observeEvent(input$gate_canvas_request, {"
+Contents/R/interface/page_gating.R,751,input,gate_canvas_select,"observeEvent(input$gate_canvas_select, {"
+Contents/R/interface/page_gating.R,751,observeEvent,observeEvent,"observeEvent(input$gate_canvas_select, {"
+Contents/R/interface/page_gating.R,752,input,gate_canvas_select,"if (nzchar(input$gate_canvas_select %||% """")) shared$gating$active_gate_id(input$gate_canvas_select)"
+Contents/R/interface/page_gating.R,752,input,gate_canvas_select,"if (nzchar(input$gate_canvas_select %||% """")) shared$gating$active_gate_id(input$gate_canvas_select)"
+Contents/R/interface/page_gating.R,755,output,nav_toolbar,output$nav_toolbar <- renderUI({
+Contents/R/interface/page_gating.R,755,render,renderUI,output$nav_toolbar <- renderUI({
+Contents/R/interface/page_gating.R,781,input,nav_add_basket,"observeEvent(input$nav_add_basket, {"
+Contents/R/interface/page_gating.R,781,observeEvent,observeEvent,"observeEvent(input$nav_add_basket, {"
+Contents/R/interface/page_gating.R,787,input,nav_prev_sample,"observeEvent(input$nav_prev_sample, {"
+Contents/R/interface/page_gating.R,787,observeEvent,observeEvent,"observeEvent(input$nav_prev_sample, {"
+Contents/R/interface/page_gating.R,794,input,nav_next_sample,"observeEvent(input$nav_next_sample, {"
+Contents/R/interface/page_gating.R,794,observeEvent,observeEvent,"observeEvent(input$nav_next_sample, {"
+Contents/R/interface/page_gating.R,801,input,nav_parent_gate,"observeEvent(input$nav_parent_gate, {"
+Contents/R/interface/page_gating.R,801,observeEvent,observeEvent,"observeEvent(input$nav_parent_gate, {"
+Contents/R/interface/page_gating.R,805,input,nav_child_gate,"observeEvent(input$nav_child_gate, {"
+Contents/R/interface/page_gating.R,805,observeEvent,observeEvent,"observeEvent(input$nav_child_gate, {"
+Contents/R/interface/page_gating.R,811,output,navigator_samples,output$navigator_samples <- renderUI({
+Contents/R/interface/page_gating.R,811,render,renderUI,output$navigator_samples <- renderUI({
+Contents/R/interface/page_gating.R,854,input,navigator_sample_select,"observeEvent(input$navigator_sample_select, {"
+Contents/R/interface/page_gating.R,854,observeEvent,observeEvent,"observeEvent(input$navigator_sample_select, {"
+Contents/R/interface/page_gating.R,855,input,navigator_sample_select,sid <- input$navigator_sample_select
+Contents/R/interface/page_gating.R,862,observe,observe,observe({
+Contents/R/interface/page_gating.R,886,output,navigator_gates,output$navigator_gates <- renderUI({
+Contents/R/interface/page_gating.R,886,render,renderUI,output$navigator_gates <- renderUI({
+Contents/R/interface/page_gating.R,932,input,gate_navigator_select,"observeEvent(input$gate_navigator_select, {"
+Contents/R/interface/page_gating.R,932,observeEvent,observeEvent,"observeEvent(input$gate_navigator_select, {"
+Contents/R/interface/page_gating.R,933,input,gate_navigator_select,msg <- input$gate_navigator_select
+Contents/R/interface/page_gating.R,950,input,gate_navigator_drop,"observeEvent(input$gate_navigator_drop, {"
+Contents/R/interface/page_gating.R,950,observeEvent,observeEvent,"observeEvent(input$gate_navigator_drop, {"
+Contents/R/interface/page_gating.R,951,input,gate_navigator_drop,msg <- input$gate_navigator_drop
+Contents/R/interface/page_gating.R,967,input,confirm_gate_drop,"observeEvent(input$confirm_gate_drop, {"
+Contents/R/interface/page_gating.R,967,observeEvent,observeEvent,"observeEvent(input$confirm_gate_drop, {"
+Contents/R/interface/page_gating.R,1019,observe,observe,observe({
+Contents/R/interface/page_gating.R,1026,input,display_mode,"if (is.null(wins[[win_id]])) wins[[win_id]] <- list(id = win_id, gate_id = gid, mode = input$display_mode %||% ""pseudocolor"")"
+Contents/R/interface/page_gating.R,1032,input,close_gate_preview,"observeEvent(input$close_gate_preview, {"
+Contents/R/interface/page_gating.R,1032,observeEvent,observeEvent,"observeEvent(input$close_gate_preview, {"
+Contents/R/interface/page_gating.R,1033,input,close_gate_preview,id <- input$close_gate_preview
+Contents/R/interface/page_gating.R,1039,input,gate_preview_settings,"observeEvent(input$gate_preview_settings, {"
+Contents/R/interface/page_gating.R,1039,observeEvent,observeEvent,"observeEvent(input$gate_preview_settings, {"
+Contents/R/interface/page_gating.R,1040,input,gate_preview_settings,id <- input$gate_preview_settings
+Contents/R/interface/page_gating.R,1054,input,apply_preview_settings,"observeEvent(input$apply_preview_settings, {"
+Contents/R/interface/page_gating.R,1054,observeEvent,observeEvent,"observeEvent(input$apply_preview_settings, {"
+Contents/R/interface/page_gating.R,1058,input,preview_mode,"wins[[ids[[1]]]]$mode <- input$preview_mode %||% ""pseudocolor"""
+Contents/R/interface/page_gating.R,1065,output,gate_preview_windows,output$gate_preview_windows <- renderUI({
+Contents/R/interface/page_gating.R,1065,render,renderUI,output$gate_preview_windows <- renderUI({
+Contents/R/interface/page_gating.R,1103,observe,observe,observe({
+Contents/R/interface/page_gating.R,1113,output,gate_tree,output$gate_tree <- renderUI({
+Contents/R/interface/page_gating.R,1113,render,renderUI,output$gate_tree <- renderUI({
+Contents/R/interface/page_gating.R,1147,input,select_gate,"observeEvent(input$select_gate, {"
+Contents/R/interface/page_gating.R,1147,observeEvent,observeEvent,"observeEvent(input$select_gate, {"
+Contents/R/interface/page_gating.R,1148,input,select_gate,val <- input$select_gate
+Contents/R/interface/page_gating.R,1152,observeEvent,observeEvent,"observeEvent(shared$gating$active_gate_id(), {"
+Contents/R/interface/page_gating.R,1159,output,count_table,output$count_table <- DT::renderDataTable({
+Contents/R/interface/page_gating.R,1159,render,renderDataTable,output$count_table <- DT::renderDataTable({
+Contents/R/interface/page_gating_concat.R,69,reactive,reactive,sample_table <- reactive(shared$fcs$table())
+Contents/R/interface/page_gating_concat.R,71,input,run_preprocess,"observeEvent(input$run_preprocess, {"
+Contents/R/interface/page_gating_concat.R,71,observeEvent,observeEvent,"observeEvent(input$run_preprocess, {"
+Contents/R/interface/page_gating_concat.R,114,output,preprocess_status,output$preprocess_status <- renderText({
+Contents/R/interface/page_gating_concat.R,114,render,renderText,output$preprocess_status <- renderText({
+Contents/R/interface/page_gating_concat.R,120,output,basket_counts,output$basket_counts <- DT::renderDataTable({
+Contents/R/interface/page_gating_concat.R,120,render,renderDataTable,output$basket_counts <- DT::renderDataTable({
+Contents/R/interface/page_gating_concat.R,127,input,build_concat,"observeEvent(input$build_concat, {"
+Contents/R/interface/page_gating_concat.R,127,observeEvent,observeEvent,"observeEvent(input$build_concat, {"
+Contents/R/interface/page_gating_concat.R,128,input,concat_mode,"cc <- flowjo_population_concat(shared$fcs$registry(), shared$gating$gates(), shared$gating$memberships(), shared$populations$items(), mode = input$concat_mode %||% ""cap"", cap = inp"
+Contents/R/interface/page_gating_concat.R,128,input,balanced_n,"cc <- flowjo_population_concat(shared$fcs$registry(), shared$gating$gates(), shared$gating$memberships(), shared$populations$items(), mode = input$concat_mode %||% ""cap"", cap = inp"
+Contents/R/interface/page_gating_concat.R,137,output,concat_status,output$concat_status <- renderText({
+Contents/R/interface/page_gating_concat.R,137,render,renderText,output$concat_status <- renderText({
+Contents/R/interface/page_gating_concat.R,143,output,marker_picker,output$marker_picker <- renderUI({
+Contents/R/interface/page_gating_concat.R,143,render,renderUI,output$marker_picker <- renderUI({
+Contents/R/interface/page_gating_concat.R,149,output,export_concat,output$export_concat <- downloadHandler(
+Contents/R/interface/page_gating_concat.R,156,input,concat_mode,"cc <- flowjo_population_concat(shared$fcs$registry(), shared$gating$gates(), shared$gating$memberships(), shared$populations$items(), mode = input$concat_mode %||% ""cap"", cap = inp"
+Contents/R/interface/page_gating_concat.R,156,input,balanced_n,"cc <- flowjo_population_concat(shared$fcs$registry(), shared$gating$gates(), shared$gating$memberships(), shared$populations$items(), mode = input$concat_mode %||% ""cap"", cap = inp"
+Contents/R/interface/page_gating_concat.R,163,input,run_cluster,"observeEvent(input$run_cluster, {"
+Contents/R/interface/page_gating_concat.R,163,observeEvent,observeEvent,"observeEvent(input$run_cluster, {"
+Contents/R/interface/page_gating_concat.R,166,input,cluster_markers,"mk <- intersect(input$cluster_markers %||% character(0), names(dat))"
+Contents/R/interface/page_gating_concat.R,169,input,cluster_seed,"cl <- flowjo_cluster_concat(dat, marker_cols = mk, seed = as.integer(input$cluster_seed %||% 42), k = as.integer(input$cluster_k %||% 20))"
+Contents/R/interface/page_gating_concat.R,169,input,cluster_k,"cl <- flowjo_cluster_concat(dat, marker_cols = mk, seed = as.integer(input$cluster_seed %||% 42), k = as.integer(input$cluster_k %||% 20))"
+Contents/R/interface/page_gating_concat.R,173,output,cluster_umap,output$cluster_umap <- renderPlot({
+Contents/R/interface/page_gating_concat.R,173,render,renderPlot,output$cluster_umap <- renderPlot({
+Contents/R/interface/page_gating_concat.R,182,output,cluster_freq,output$cluster_freq <- DT::renderDataTable({
+Contents/R/interface/page_gating_concat.R,182,render,renderDataTable,output$cluster_freq <- DT::renderDataTable({
+Contents/R/interface/page_gating_concat.R,188,output,cluster_marker_summary,output$cluster_marker_summary <- DT::renderDataTable({
+Contents/R/interface/page_gating_concat.R,188,render,renderDataTable,output$cluster_marker_summary <- DT::renderDataTable({
+Contents/R/interface/page_gating_concat.R,194,output,parity_table,output$parity_table <- DT::renderDataTable({
+Contents/R/interface/page_gating_concat.R,194,render,renderDataTable,output$parity_table <- DT::renderDataTable({
+Contents/R/interface/page_import_export.R,24,input,scan_ref,"observeEvent(input$scan_ref, {"
+Contents/R/interface/page_import_export.R,24,observeEvent,observeEvent,"observeEvent(input$scan_ref, {"
+Contents/R/interface/page_import_export.R,25,input,ref_path,inventory(flowjo_reference_inventory(input$ref_path))
+Contents/R/interface/page_import_export.R,27,output,ref_files,output$ref_files <- DT::renderDataTable({
+Contents/R/interface/page_import_export.R,27,render,renderDataTable,output$ref_files <- DT::renderDataTable({
+Contents/R/interface/page_import_export.R,30,input,import_wsp,"observeEvent(input$import_wsp, {"
+Contents/R/interface/page_import_export.R,30,observeEvent,observeEvent,"observeEvent(input$import_wsp, {"
+Contents/R/interface/page_import_export.R,36,output,wsp_report,output$wsp_report <- renderPrint({
+Contents/R/interface/page_import_export.R,36,render,renderPrint,output$wsp_report <- renderPrint({
+Contents/R/interface/page_statistics.R,11,output,stats_table,output$stats_table <- DT::renderDataTable({
+Contents/R/interface/page_statistics.R,11,render,renderDataTable,output$stats_table <- DT::renderDataTable({
+Contents/R/interface/page_umap_flowsom.R,60,output,gate_notice,output$gate_notice <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,60,render,renderUI,output$gate_notice <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,68,reactive,reactive,candidate_group_cols <- reactive({
+Contents/R/interface/page_umap_flowsom.R,83,output,color_by_ui,output$color_by_ui <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,83,render,renderUI,output$color_by_ui <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,84,input,view_mode,req(input$view_mode)
+Contents/R/interface/page_umap_flowsom.R,85,input,view_mode,"if (!identical(input$view_mode, ""3d"")) return(NULL)"
+Contents/R/interface/page_umap_flowsom.R,91,output,channels_picker,output$channels_picker <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,91,render,renderUI,output$channels_picker <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,95,input,channels,current <- isolate(input$channels %||% character(0))
+Contents/R/interface/page_umap_flowsom.R,180,output,run_notice,output$run_notice <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,180,render,renderUI,output$run_notice <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,203,output,preview_plot_ui,output$preview_plot_ui <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,203,render,renderUI,output$preview_plot_ui <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,204,input,view_mode,req(input$view_mode)
+Contents/R/interface/page_umap_flowsom.R,205,input,view_mode,"if (identical(input$view_mode, ""3d"")) {"
+Contents/R/interface/page_umap_flowsom.R,212,input,run,"observeEvent(input$run, {"
+Contents/R/interface/page_umap_flowsom.R,212,observeEvent,observeEvent,"observeEvent(input$run, {"
+Contents/R/interface/page_umap_flowsom.R,217,input,channels,sel_channels <- input$channels %||% character(0)
+Contents/R/interface/page_umap_flowsom.R,235,input,neighbors,n_neighbors <- as.integer(input$neighbors %||% 15)
+Contents/R/interface/page_umap_flowsom.R,236,input,min_dist,min_dist <- as.numeric(input$min_dist %||% 0.3)
+Contents/R/interface/page_umap_flowsom.R,237,input,seed,seed_i <- as.integer(input$seed %||% 42)
+Contents/R/interface/page_umap_flowsom.R,238,input,metric,"metric_i <- as.character(input$metric %||% ""euclidean"")"
+Contents/R/interface/page_umap_flowsom.R,239,input,xdim,xdim_i <- as.integer(input$xdim %||% 10)
+Contents/R/interface/page_umap_flowsom.R,240,input,ydim,ydim_i <- as.integer(input$ydim %||% 10)
+Contents/R/interface/page_umap_flowsom.R,241,input,rlen,rlen_i <- as.integer(input$rlen %||% 10)
+Contents/R/interface/page_umap_flowsom.R,242,input,k,k_i <- as.integer(input$k %||% 20)
+Contents/R/interface/page_umap_flowsom.R,253,input,scale,if (isTRUE(input$scale)) mat <- scale(mat)
+Contents/R/interface/page_umap_flowsom.R,270,input,scale,"seed = seed_i, scale_data = isTRUE(input$scale), k = k_i"
+Contents/R/interface/page_umap_flowsom.R,281,input,scale,"k = fs_res$k_used %||% k_i, scale = isTRUE(input$scale)"
+Contents/R/interface/page_umap_flowsom.R,305,reactive,reactive,build_2d_plot <- reactive({
+Contents/R/interface/page_umap_flowsom.R,322,output,plot,output$plot <- renderPlot({
+Contents/R/interface/page_umap_flowsom.R,322,render,renderPlot,output$plot <- renderPlot({
+Contents/R/interface/page_umap_flowsom.R,323,input,view_mode,req(input$view_mode)
+Contents/R/interface/page_umap_flowsom.R,324,input,view_mode,"if (!identical(input$view_mode, ""2d"")) return(invisible(NULL))"
+Contents/R/interface/page_umap_flowsom.R,328,output,plot3d,output$plot3d <- renderPlotly({
+Contents/R/interface/page_umap_flowsom.R,328,render,renderPlotly,output$plot3d <- renderPlotly({
+Contents/R/interface/page_umap_flowsom.R,329,input,view_mode,req(input$view_mode)
+Contents/R/interface/page_umap_flowsom.R,330,input,view_mode,"if (!identical(input$view_mode, ""3d"")) return(NULL)"
+Contents/R/interface/page_umap_flowsom.R,333,input,color_by,"color_by <- input$color_by %||% ""FlowSOM_Cluster"""
+Contents/R/interface/page_umap_flowsom.R,361,output,export_ui,output$export_ui <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,361,render,renderUI,output$export_ui <- renderUI({
+Contents/R/interface/page_umap_flowsom.R,362,input,view_mode,req(input$view_mode)
+Contents/R/interface/page_umap_flowsom.R,363,input,view_mode,"if (identical(input$view_mode, ""3d"")) {"
+Contents/R/interface/page_umap_flowsom.R,380,output,download_umap_pdf,output$download_umap_pdf <- downloadHandler(
+Contents/R/interface/page_umap_flowsom.R,387,output,download_umap_svg,output$download_umap_svg <- downloadHandler(
+Contents/R/interface/page_umap_flowsom.R,396,input,download_umap3d_bundle,"observeEvent(input$download_umap3d_bundle, {"
+Contents/R/interface/page_umap_flowsom.R,396,observeEvent,observeEvent,"observeEvent(input$download_umap3d_bundle, {"
+Contents/R/interface/page_umap_flowsom.R,400,output,download_umap3d_bundle,output$download_umap3d_bundle <- downloadHandler(
+Contents/R/interface/page_umap_flowsom.R,401,input,umap3d_export_name,"filename = function() paste0(gsub(""[^A-Za-z0-9_.-]+"", ""_"", input$umap3d_export_name %||% ""umap3d_export""), ""_bundle.zip""),"
+Contents/R/interface/page_umap_flowsom.R,406,input,color_by,"color_by <- input$color_by %||% ""FlowSOM_Cluster"""
+Contents/R/interface/page_umap_flowsom.R,411,input,umap3d_export_name,"stem <- gsub(""[^A-Za-z0-9_.-]+"", ""_"", input$umap3d_export_name %||% ""umap3d_export"")"
+Contents/R/interface/page_umap_flowsom.R,448,input,send,"observeEvent(input$send, {"
+Contents/R/interface/page_umap_flowsom.R,448,observeEvent,observeEvent,"observeEvent(input$send, {"
+Contents/R/interface/page_workspace.R,20,output,sample_table,output$sample_table <- DT::renderDataTable({
+Contents/R/interface/page_workspace.R,20,render,renderDataTable,output$sample_table <- DT::renderDataTable({
+Contents/R/interface/page_workspace.R,23,output,group_sample_picker,output$group_sample_picker <- renderUI({
+Contents/R/interface/page_workspace.R,23,render,renderUI,output$group_sample_picker <- renderUI({
+Contents/R/interface/page_workspace.R,28,input,add_group,"observeEvent(input$add_group, {"
+Contents/R/interface/page_workspace.R,28,observeEvent,observeEvent,"observeEvent(input$add_group, {"
+Contents/R/interface/page_workspace.R,29,input,group_name,"nm <- trimws(input$group_name %||% """")"
+Contents/R/interface/page_workspace.R,30,input,group_samples,"req(nzchar(nm), length(input$group_samples) > 0)"
+Contents/R/interface/page_workspace.R,31,input,group_samples,"shared$gating$add_group(nm, input$group_samples)"
+Contents/R/interface/page_workspace.R,33,output,group_list,output$group_list <- renderUI({
+Contents/R/interface/page_workspace.R,33,render,renderUI,output$group_list <- renderUI({
+Contents/app.R,115,observeEvent,observeEvent,"observeEvent(shared$fcs$auto_switch_to_umap(), {"
+Contents/app.R,123,input,nav_help,"observeEvent(input$nav_help, {"
+Contents/app.R,123,observeEvent,observeEvent,"observeEvent(input$nav_help, {"
+Contents/app.R,133,input,nav_dark_mode_toggle,"observeEvent(input$nav_dark_mode_toggle, {"
+Contents/app.R,133,observeEvent,observeEvent,"observeEvent(input$nav_dark_mode_toggle, {"
+Contents/app.R,146,observeEvent,observeEvent,"observeEvent(sidebar_state$open_settings(), {"
+Contents/app.R,155,output,shared_controls_ui,output$shared_controls_ui <- renderUI({
+Contents/app.R,155,render,renderUI,output$shared_controls_ui <- renderUI({
+Contents/app.R,189,input,sh_use_mid_color,"observe({ shinyjs::toggle(id = ""sh_mid_wrap"", condition = isTRUE(input$sh_use_mid_color)) })"
+Contents/app.R,189,observe,observe,"observe({ shinyjs::toggle(id = ""sh_mid_wrap"", condition = isTRUE(input$sh_use_mid_color)) })"
+Contents/app.R,190,input,sh_theme,"observeEvent(input$sh_theme,          shared$params$plot_theme(input$sh_theme),          ignoreInit = TRUE)"
+Contents/app.R,190,input,sh_theme,"observeEvent(input$sh_theme,          shared$params$plot_theme(input$sh_theme),          ignoreInit = TRUE)"
+Contents/app.R,190,observeEvent,observeEvent,"observeEvent(input$sh_theme,          shared$params$plot_theme(input$sh_theme),          ignoreInit = TRUE)"
+Contents/app.R,191,input,sh_point_size,"observeEvent(input$sh_point_size,     shared$params$point_size(input$sh_point_size),     ignoreInit = TRUE)"
+Contents/app.R,191,input,sh_point_size,"observeEvent(input$sh_point_size,     shared$params$point_size(input$sh_point_size),     ignoreInit = TRUE)"
+Contents/app.R,191,observeEvent,observeEvent,"observeEvent(input$sh_point_size,     shared$params$point_size(input$sh_point_size),     ignoreInit = TRUE)"
+Contents/app.R,192,input,sh_point_alpha,"observeEvent(input$sh_point_alpha,    shared$params$point_alpha(input$sh_point_alpha),   ignoreInit = TRUE)"
+Contents/app.R,192,input,sh_point_alpha,"observeEvent(input$sh_point_alpha,    shared$params$point_alpha(input$sh_point_alpha),   ignoreInit = TRUE)"
+Contents/app.R,192,observeEvent,observeEvent,"observeEvent(input$sh_point_alpha,    shared$params$point_alpha(input$sh_point_alpha),   ignoreInit = TRUE)"
+Contents/app.R,193,input,sh_point_shape,"observeEvent(input$sh_point_shape,    shared$params$point_shape(input$sh_point_shape),   ignoreInit = TRUE)"
+Contents/app.R,193,input,sh_point_shape,"observeEvent(input$sh_point_shape,    shared$params$point_shape(input$sh_point_shape),   ignoreInit = TRUE)"
+Contents/app.R,193,observeEvent,observeEvent,"observeEvent(input$sh_point_shape,    shared$params$point_shape(input$sh_point_shape),   ignoreInit = TRUE)"
+Contents/app.R,194,input,sh_point_stroke,"observeEvent(input$sh_point_stroke,   shared$params$point_stroke(input$sh_point_stroke), ignoreInit = TRUE)"
+Contents/app.R,194,input,sh_point_stroke,"observeEvent(input$sh_point_stroke,   shared$params$point_stroke(input$sh_point_stroke), ignoreInit = TRUE)"
+Contents/app.R,194,observeEvent,observeEvent,"observeEvent(input$sh_point_stroke,   shared$params$point_stroke(input$sh_point_stroke), ignoreInit = TRUE)"
+Contents/app.R,195,input,sh_color_map,"observeEvent(input$sh_color_map,      shared$params$color_map(input$sh_color_map),       ignoreInit = TRUE)"
+Contents/app.R,195,input,sh_color_map,"observeEvent(input$sh_color_map,      shared$params$color_map(input$sh_color_map),       ignoreInit = TRUE)"
+Contents/app.R,195,observeEvent,observeEvent,"observeEvent(input$sh_color_map,      shared$params$color_map(input$sh_color_map),       ignoreInit = TRUE)"
+Contents/app.R,196,input,sh_low_color,"observeEvent(input$sh_low_color,      shared$params$low_color(input$sh_low_color),       ignoreInit = TRUE)"
+Contents/app.R,196,input,sh_low_color,"observeEvent(input$sh_low_color,      shared$params$low_color(input$sh_low_color),       ignoreInit = TRUE)"
+Contents/app.R,196,observeEvent,observeEvent,"observeEvent(input$sh_low_color,      shared$params$low_color(input$sh_low_color),       ignoreInit = TRUE)"
+Contents/app.R,197,input,sh_high_color,"observeEvent(input$sh_high_color,     shared$params$high_color(input$sh_high_color),     ignoreInit = TRUE)"
+Contents/app.R,197,input,sh_high_color,"observeEvent(input$sh_high_color,     shared$params$high_color(input$sh_high_color),     ignoreInit = TRUE)"
+Contents/app.R,197,observeEvent,observeEvent,"observeEvent(input$sh_high_color,     shared$params$high_color(input$sh_high_color),     ignoreInit = TRUE)"
+Contents/app.R,198,input,sh_use_mid_color,"observeEvent(input$sh_use_mid_color,  shared$params$use_mid_color(input$sh_use_mid_color), ignoreInit = TRUE)"
+Contents/app.R,198,input,sh_use_mid_color,"observeEvent(input$sh_use_mid_color,  shared$params$use_mid_color(input$sh_use_mid_color), ignoreInit = TRUE)"
+Contents/app.R,198,observeEvent,observeEvent,"observeEvent(input$sh_use_mid_color,  shared$params$use_mid_color(input$sh_use_mid_color), ignoreInit = TRUE)"
+Contents/app.R,199,input,sh_mid_color,"observeEvent(input$sh_mid_color,      shared$params$mid_color(input$sh_mid_color),       ignoreInit = TRUE)"
+Contents/app.R,199,input,sh_mid_color,"observeEvent(input$sh_mid_color,      shared$params$mid_color(input$sh_mid_color),       ignoreInit = TRUE)"
+Contents/app.R,199,observeEvent,observeEvent,"observeEvent(input$sh_mid_color,      shared$params$mid_color(input$sh_mid_color),       ignoreInit = TRUE)"
+Contents/app.R,200,input,sh_title,"observeEvent(input$sh_title,          shared$params$title(input$sh_title),               ignoreInit = TRUE)"
+Contents/app.R,200,input,sh_title,"observeEvent(input$sh_title,          shared$params$title(input$sh_title),               ignoreInit = TRUE)"
+Contents/app.R,200,observeEvent,observeEvent,"observeEvent(input$sh_title,          shared$params$title(input$sh_title),               ignoreInit = TRUE)"
+Contents/app.R,201,input,sh_xlab,"observeEvent(input$sh_xlab,           shared$params$xlab(input$sh_xlab),                 ignoreInit = TRUE)"
+Contents/app.R,201,input,sh_xlab,"observeEvent(input$sh_xlab,           shared$params$xlab(input$sh_xlab),                 ignoreInit = TRUE)"
+Contents/app.R,201,observeEvent,observeEvent,"observeEvent(input$sh_xlab,           shared$params$xlab(input$sh_xlab),                 ignoreInit = TRUE)"
+Contents/app.R,202,input,sh_ylab,"observeEvent(input$sh_ylab,           shared$params$ylab(input$sh_ylab),                 ignoreInit = TRUE)"
+Contents/app.R,202,input,sh_ylab,"observeEvent(input$sh_ylab,           shared$params$ylab(input$sh_ylab),                 ignoreInit = TRUE)"
+Contents/app.R,202,observeEvent,observeEvent,"observeEvent(input$sh_ylab,           shared$params$ylab(input$sh_ylab),                 ignoreInit = TRUE)"
+Contents/app.R,203,input,sh_title_size,"observeEvent(input$sh_title_size,     shared$params$title_size(input$sh_title_size),     ignoreInit = TRUE)"
+Contents/app.R,203,input,sh_title_size,"observeEvent(input$sh_title_size,     shared$params$title_size(input$sh_title_size),     ignoreInit = TRUE)"
+Contents/app.R,203,observeEvent,observeEvent,"observeEvent(input$sh_title_size,     shared$params$title_size(input$sh_title_size),     ignoreInit = TRUE)"
+Contents/app.R,204,input,sh_axis_title_size,"observeEvent(input$sh_axis_title_size,shared$params$axis_title_size(input$sh_axis_title_size), ignoreInit = TRUE)"
+Contents/app.R,204,input,sh_axis_title_size,"observeEvent(input$sh_axis_title_size,shared$params$axis_title_size(input$sh_axis_title_size), ignoreInit = TRUE)"
+Contents/app.R,204,observeEvent,observeEvent,"observeEvent(input$sh_axis_title_size,shared$params$axis_title_size(input$sh_axis_title_size), ignoreInit = TRUE)"
+Contents/app.R,205,input,sh_axis_text_size,"observeEvent(input$sh_axis_text_size, shared$params$axis_text_size(input$sh_axis_text_size),   ignoreInit = TRUE)"
+Contents/app.R,205,input,sh_axis_text_size,"observeEvent(input$sh_axis_text_size, shared$params$axis_text_size(input$sh_axis_text_size),   ignoreInit = TRUE)"
+Contents/app.R,205,observeEvent,observeEvent,"observeEvent(input$sh_axis_text_size, shared$params$axis_text_size(input$sh_axis_text_size),   ignoreInit = TRUE)"

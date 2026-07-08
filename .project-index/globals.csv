@@ -1,0 +1,41 @@
+file,line,type,name,snippet
+Contents/R/global/shared_store.R,4,reactiveVal,df_raw,df_raw            <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,5,reactiveVal,df_processed,df_processed      <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,6,reactiveVal,numeric_choices,numeric_choices   <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,7,reactiveVal,facet_choices,facet_choices     <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,8,reactiveVal,axis_pairs_val,"axis_pairs_val    <- reactiveVal(data.frame(x=character(), y=character()))"
+Contents/R/global/shared_store.R,9,reactiveVal,transform_settings,transform_settings<- reactiveVal(list())
+Contents/R/global/shared_store.R,10,reactiveVal,scale_settings,scale_settings    <- reactiveVal(list())
+Contents/R/global/shared_store.R,12,reactiveVal,flowsom_df,flowsom_df        <- reactiveVal(NULL)  # either merged CSV or sent from UMAP page
+Contents/R/global/shared_store.R,13,reactiveVal,flowsom_order,flowsom_order     <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,15,reactiveVal,umap_fsom_df,umap_fsom_df      <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,16,reactiveVal,umap_fsom_params,umap_fsom_params  <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,17,reactiveVal,fcs_registry,fcs_registry      <- reactiveVal(list())
+Contents/R/global/shared_store.R,18,reactiveVal,active_fcs_id,active_fcs_id     <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,19,reactiveVal,auto_switch_umap,auto_switch_umap  <- reactiveVal(FALSE)
+Contents/R/global/shared_store.R,21,reactiveVal,preprocess_result,preprocess_result <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,22,reactiveVal,isolated_pops,isolated_pops     <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,23,reactiveVal,concat_object,concat_object     <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,24,reactiveVal,concat_data,concat_data       <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,25,reactiveVal,concat_markers,concat_markers    <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,26,reactiveVal,cluster_result,cluster_result    <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,27,reactiveVal,parity_result,parity_result     <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,28,reactiveVal,gate_groups,gate_groups       <- reactiveVal(list())
+Contents/R/global/shared_store.R,29,reactiveVal,gate_tree,gate_tree         <- reactiveVal(list())
+Contents/R/global/shared_store.R,30,reactiveVal,gate_memberships,gate_memberships  <- reactiveVal(list())
+Contents/R/global/shared_store.R,31,reactiveVal,gate_active_id,gate_active_id    <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,32,reactiveVal,gate_sync_status,gate_sync_status  <- reactiveVal(data.frame())
+Contents/R/global/shared_store.R,33,reactiveVal,gate_wsp_report,gate_wsp_report   <- reactiveVal(NULL)
+Contents/R/global/shared_store.R,34,reactiveVal,population_items,population_items  <- reactiveVal(list())
+Contents/R/interface/components/component_right_sidebar.R,53,reactiveVal,selected_fcs_id,selected_fcs_id <- reactiveVal(NULL)
+Contents/R/interface/components/component_right_sidebar.R,54,reactiveVal,selected_population_id,selected_population_id <- reactiveVal(NULL)
+Contents/R/interface/page_gating.R,83,reactiveVal,navigator_selected_gates,navigator_selected_gates <- reactiveVal(character())
+Contents/R/interface/page_gating.R,84,reactiveVal,gate_preview_windows,gate_preview_windows <- reactiveVal(list())
+Contents/R/interface/page_gating.R,85,reactiveVal,pending_gate_drop,pending_gate_drop <- reactiveVal(NULL)
+Contents/R/interface/page_gating.R,261,reactiveVal,axis_modal_axis,axis_modal_axis <- reactiveVal(NULL)
+Contents/R/interface/page_gating.R,401,reactiveVal,polygon_points,"polygon_points <- reactiveVal(data.frame(x = numeric(), y = numeric()))"
+Contents/R/interface/page_import_export.R,23,reactiveVal,inventory,"inventory <- reactiveVal(data.frame(type = character(), path = character(), name = character()))"
+Contents/R/interface/page_umap_flowsom.R,57,reactiveVal,run_state,"run_state <- reactiveVal(""idle"")"
+Contents/R/interface/page_umap_flowsom.R,58,reactiveVal,default_channels_signature,default_channels_signature <- reactiveVal(NULL)
+Contents/global.R,2,option,option,options(shiny.maxRequestSize = 10 * 1024^3) # 10 GB upload limit for large FCS files
+Contents/run.R,8,option,option,"options(repos = c(CRAN = ""https://cloud.r-project.org""))"

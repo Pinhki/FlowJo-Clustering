@@ -1,0 +1,186 @@
+file,line,state,usage,snippet
+Contents/R/global/shared_store.R,65,df_raw,write_or_call,df_raw(df)
+Contents/R/global/shared_store.R,66,numeric_choices,write_or_call,numeric_choices(entry$numeric_cols)
+Contents/R/global/shared_store.R,67,facet_choices,write_or_call,facet_choices(entry$facet_cols)
+Contents/R/global/shared_store.R,68,axis_pairs_val,write_or_call,axis_pairs_val(entry$axis_pairs)
+Contents/R/global/shared_store.R,69,df_processed,write_or_call,df_processed(NULL)
+Contents/R/global/shared_store.R,70,flowsom_df,write_or_call,flowsom_df(NULL)
+Contents/R/global/shared_store.R,71,flowsom_order,write_or_call,flowsom_order(NULL)
+Contents/R/global/shared_store.R,72,umap_fsom_df,write_or_call,umap_fsom_df(NULL)
+Contents/R/global/shared_store.R,73,umap_fsom_params,write_or_call,umap_fsom_params(NULL)
+Contents/R/global/shared_store.R,74,preprocess_result,write_or_call,preprocess_result(NULL)
+Contents/R/global/shared_store.R,75,isolated_pops,write_or_call,isolated_pops(NULL)
+Contents/R/global/shared_store.R,76,concat_object,write_or_call,concat_object(NULL)
+Contents/R/global/shared_store.R,77,concat_data,write_or_call,concat_data(NULL)
+Contents/R/global/shared_store.R,78,concat_markers,write_or_call,concat_markers(NULL)
+Contents/R/global/shared_store.R,79,cluster_result,write_or_call,cluster_result(NULL)
+Contents/R/global/shared_store.R,80,parity_result,write_or_call,parity_result(NULL)
+Contents/R/global/shared_store.R,81,gate_active_id,write_or_call,gate_active_id(NULL)
+Contents/R/global/shared_store.R,82,active_fcs_id,write_or_call,active_fcs_id(entry$id)
+Contents/R/global/shared_store.R,91,gate_tree,read,gates <- gate_tree()
+Contents/R/global/shared_store.R,92,gate_wsp_report,read,wsp <- gate_wsp_report()
+Contents/R/global/shared_store.R,101,fcs_registry,read,reg <- fcs_registry()
+Contents/R/global/shared_store.R,103,fcs_registry,write_or_call,fcs_registry(reg)
+Contents/R/global/shared_store.R,105,auto_switch_umap,write_or_call,auto_switch_umap(should_land_on_gating(entry))
+Contents/R/global/shared_store.R,109,fcs_registry,read,reg <- fcs_registry()
+Contents/R/global/shared_store.R,111,active_fcs_id,read,"was_active <- identical(active_fcs_id(), id)"
+Contents/R/global/shared_store.R,113,fcs_registry,write_or_call,fcs_registry(reg)
+Contents/R/global/shared_store.R,118,active_fcs_id,write_or_call,active_fcs_id(NULL)
+Contents/R/global/shared_store.R,119,df_raw,write_or_call,df_raw(NULL)
+Contents/R/global/shared_store.R,120,df_processed,write_or_call,df_processed(NULL)
+Contents/R/global/shared_store.R,121,numeric_choices,write_or_call,numeric_choices(NULL)
+Contents/R/global/shared_store.R,122,facet_choices,write_or_call,facet_choices(NULL)
+Contents/R/global/shared_store.R,123,axis_pairs_val,write_or_call,"axis_pairs_val(data.frame(x=character(), y=character()))"
+Contents/R/global/shared_store.R,124,flowsom_df,write_or_call,flowsom_df(NULL)
+Contents/R/global/shared_store.R,125,flowsom_order,write_or_call,flowsom_order(NULL)
+Contents/R/global/shared_store.R,126,umap_fsom_df,write_or_call,umap_fsom_df(NULL)
+Contents/R/global/shared_store.R,127,umap_fsom_params,write_or_call,umap_fsom_params(NULL)
+Contents/R/global/shared_store.R,128,preprocess_result,write_or_call,preprocess_result(NULL)
+Contents/R/global/shared_store.R,129,isolated_pops,write_or_call,isolated_pops(NULL)
+Contents/R/global/shared_store.R,130,concat_object,write_or_call,concat_object(NULL)
+Contents/R/global/shared_store.R,131,concat_data,write_or_call,concat_data(NULL)
+Contents/R/global/shared_store.R,132,concat_markers,write_or_call,concat_markers(NULL)
+Contents/R/global/shared_store.R,133,cluster_result,write_or_call,cluster_result(NULL)
+Contents/R/global/shared_store.R,134,parity_result,write_or_call,parity_result(NULL)
+Contents/R/global/shared_store.R,135,gate_active_id,write_or_call,gate_active_id(NULL)
+Contents/R/global/shared_store.R,142,fcs_registry,read,reg <- fcs_registry()
+Contents/R/global/shared_store.R,145,fcs_registry,write_or_call,fcs_registry(reg)
+Contents/R/global/shared_store.R,150,fcs_registry,read,reg <- fcs_registry()
+Contents/R/global/shared_store.R,153,fcs_registry,write_or_call,fcs_registry(reg)
+Contents/R/global/shared_store.R,158,fcs_registry,read,reg <- fcs_registry()
+Contents/R/global/shared_store.R,165,auto_switch_umap,write_or_call,auto_switch_umap(FALSE)
+Contents/R/global/shared_store.R,170,fcs_registry,read,reg <- fcs_registry()
+Contents/R/global/shared_store.R,188,active_fcs_id,read,"is_active = identical(active_fcs_id(), e$id),"
+Contents/R/global/shared_store.R,195,gate_tree,read,gate_recompute <- function(gate_ids = names(gate_tree())) {
+Contents/R/global/shared_store.R,196,gate_tree,read,gates <- gate_tree()
+Contents/R/global/shared_store.R,197,fcs_registry,read,reg <- fcs_registry()
+Contents/R/global/shared_store.R,198,gate_memberships,read,memberships <- gate_memberships()
+Contents/R/global/shared_store.R,204,transform_settings,read,"gate_df <- flowjo_transform_data(e$df, transform_settings())"
+Contents/R/global/shared_store.R,239,gate_memberships,write_or_call,gate_memberships(memberships)
+Contents/R/global/shared_store.R,240,gate_sync_status,write_or_call,"gate_sync_status(if (length(sync_rows)) do.call(rbind, sync_rows) else data.frame())"
+Contents/R/global/shared_store.R,245,gate_tree,read,gates <- gate_tree()
+Contents/R/global/shared_store.R,258,gate_tree,read,gates <- gate_tree()
+Contents/R/global/shared_store.R,260,gate_tree,write_or_call,gate_tree(gates)
+Contents/R/global/shared_store.R,266,gate_tree,read,gates <- gate_tree()
+Contents/R/global/shared_store.R,268,gate_tree,write_or_call,gate_tree(gates)
+Contents/R/global/shared_store.R,269,gate_memberships,read,memberships <- gate_memberships()
+Contents/R/global/shared_store.R,271,gate_memberships,write_or_call,gate_memberships(memberships)
+Contents/R/global/shared_store.R,272,gate_active_id,read,"if (identical(gate_active_id(), gate_id)) gate_active_id(NULL)"
+Contents/R/global/shared_store.R,277,gate_groups,read,groups <- gate_groups()
+Contents/R/global/shared_store.R,280,gate_groups,write_or_call,gate_groups(groups)
+Contents/R/global/shared_store.R,285,gate_tree,read,gates <- gate_tree()
+Contents/R/global/shared_store.R,286,gate_groups,read,groups <- gate_groups()
+Contents/R/global/shared_store.R,290,gate_tree,write_or_call,gate_tree(gates)
+Contents/R/global/shared_store.R,296,cluster_result,write_or_call,concat_object(NULL); concat_data(NULL); concat_markers(NULL); cluster_result(NULL)
+Contents/R/global/shared_store.R,296,concat_data,write_or_call,concat_object(NULL); concat_data(NULL); concat_markers(NULL); cluster_result(NULL)
+Contents/R/global/shared_store.R,296,concat_markers,write_or_call,concat_object(NULL); concat_data(NULL); concat_markers(NULL); cluster_result(NULL)
+Contents/R/global/shared_store.R,296,concat_object,write_or_call,concat_object(NULL); concat_data(NULL); concat_markers(NULL); cluster_result(NULL)
+Contents/R/global/shared_store.R,300,fcs_registry,read,reg <- fcs_registry(); gates <- gate_tree(); stats <- gate_stats()
+Contents/R/global/shared_store.R,300,gate_tree,read,reg <- fcs_registry(); gates <- gate_tree(); stats <- gate_stats()
+Contents/R/global/shared_store.R,301,population_items,read,out <- population_items(); added <- 0L
+Contents/R/global/shared_store.R,311,population_items,write_or_call,population_items(out); population_clear_outputs(); invisible(added)
+Contents/R/global/shared_store.R,315,population_items,read,items <- population_items()
+Contents/R/global/shared_store.R,321,population_items,write_or_call,population_items(items); population_clear_outputs(); invisible(TRUE)
+Contents/R/global/shared_store.R,325,population_items,read,items <- population_items(); items[[id]] <- NULL
+Contents/R/global/shared_store.R,326,population_items,write_or_call,population_items(items); population_clear_outputs(); invisible(TRUE)
+Contents/R/global/shared_store.R,330,population_items,read,items <- population_items()
+Contents/R/global/shared_store.R,332,fcs_registry,read,reg <- fcs_registry(); gates <- gate_tree(); stats <- gate_stats()
+Contents/R/global/shared_store.R,332,gate_tree,read,reg <- fcs_registry(); gates <- gate_tree(); stats <- gate_stats()
+Contents/R/global/shared_store.R,347,gate_wsp_report,read,wsp_state <- gate_wsp_report()
+Contents/R/global/shared_store.R,351,transform_settings,read,"transform_settings = transform_settings(),"
+Contents/R/global/shared_store.R,352,scale_settings,read,"scale_settings     = scale_settings(),"
+Contents/R/global/shared_store.R,353,fcs_registry,read,"fcs_registry = fcs_registry(),"
+Contents/R/global/shared_store.R,354,active_fcs_id,read,"active_fcs_id = active_fcs_id(),"
+Contents/R/global/shared_store.R,355,preprocess_result,read,"preprocess_result = preprocess_result(),"
+Contents/R/global/shared_store.R,356,isolated_pops,read,"isolated_populations = isolated_pops(),"
+Contents/R/global/shared_store.R,357,concat_object,read,"concat_object = concat_object(),"
+Contents/R/global/shared_store.R,358,concat_data,read,"concat_data = concat_data(),"
+Contents/R/global/shared_store.R,359,concat_markers,read,"concat_markers = concat_markers(),"
+Contents/R/global/shared_store.R,360,cluster_result,read,"cluster_result = cluster_result(),"
+Contents/R/global/shared_store.R,361,parity_result,read,"parity_result = parity_result(),"
+Contents/R/global/shared_store.R,362,gate_groups,read,"gate_groups = gate_groups(),"
+Contents/R/global/shared_store.R,363,gate_tree,read,"gate_tree = gate_tree(),"
+Contents/R/global/shared_store.R,364,gate_memberships,read,"gate_memberships = gate_memberships(),"
+Contents/R/global/shared_store.R,365,gate_sync_status,read,"gate_sync_status = gate_sync_status(),"
+Contents/R/global/shared_store.R,367,population_items,read,population_items = population_items()
+Contents/R/global/shared_store.R,374,transform_settings,write_or_call,if (!is.null(obj$transform_settings)) transform_settings(obj$transform_settings)
+Contents/R/global/shared_store.R,375,scale_settings,write_or_call,if (!is.null(obj$scale_settings))     scale_settings(obj$scale_settings)
+Contents/R/global/shared_store.R,376,preprocess_result,write_or_call,if (!is.null(obj$preprocess_result)) preprocess_result(obj$preprocess_result)
+Contents/R/global/shared_store.R,377,isolated_pops,write_or_call,if (!is.null(obj$isolated_populations)) isolated_pops(obj$isolated_populations)
+Contents/R/global/shared_store.R,378,concat_object,write_or_call,if (!is.null(obj$concat_object)) concat_object(obj$concat_object)
+Contents/R/global/shared_store.R,379,concat_data,write_or_call,if (!is.null(obj$concat_data)) concat_data(obj$concat_data)
+Contents/R/global/shared_store.R,380,concat_markers,write_or_call,if (!is.null(obj$concat_markers)) concat_markers(obj$concat_markers)
+Contents/R/global/shared_store.R,381,cluster_result,write_or_call,if (!is.null(obj$cluster_result)) cluster_result(obj$cluster_result)
+Contents/R/global/shared_store.R,382,parity_result,write_or_call,if (!is.null(obj$parity_result)) parity_result(obj$parity_result)
+Contents/R/global/shared_store.R,383,gate_groups,write_or_call,if (!is.null(obj$gate_groups)) gate_groups(obj$gate_groups)
+Contents/R/global/shared_store.R,384,gate_tree,write_or_call,if (!is.null(obj$gate_tree)) gate_tree(obj$gate_tree)
+Contents/R/global/shared_store.R,385,gate_memberships,write_or_call,if (!is.null(obj$gate_memberships)) gate_memberships(obj$gate_memberships)
+Contents/R/global/shared_store.R,386,gate_sync_status,write_or_call,if (!is.null(obj$gate_sync_status)) gate_sync_status(obj$gate_sync_status)
+Contents/R/global/shared_store.R,387,gate_wsp_report,write_or_call,if (!is.null(obj$gate_wsp_report)) gate_wsp_report(obj$gate_wsp_report)
+Contents/R/global/shared_store.R,388,population_items,write_or_call,if (!is.null(obj$population_items)) population_items(obj$population_items)
+Contents/R/global/shared_store.R,390,fcs_registry,write_or_call,fcs_registry(obj$fcs_registry)
+Contents/R/interface/components/component_right_sidebar.R,57,selected_fcs_id,write_or_call,"selected_fcs_id(as.character(input$selected_fcs_id %||% """"))"
+Contents/R/interface/components/component_right_sidebar.R,61,selected_population_id,write_or_call,"selected_population_id(as.character(input$selected_population_id %||% """"))"
+Contents/R/interface/components/component_right_sidebar.R,65,selected_fcs_id,read,sel <- selected_fcs_id()
+Contents/R/interface/components/component_right_sidebar.R,76,selected_fcs_id,read,cur_sel <- selected_fcs_id()
+Contents/R/interface/components/component_right_sidebar.R,81,selected_fcs_id,write_or_call,selected_fcs_id(next_sel)
+Contents/R/interface/components/component_right_sidebar.R,121,selected_population_id,read,sel <- selected_population_id()
+Contents/R/interface/components/component_right_sidebar.R,136,selected_population_id,read,id <- selected_population_id(); req(id)
+Contents/R/interface/components/component_right_sidebar.R,150,selected_population_id,read,id <- selected_population_id(); req(id)
+Contents/R/interface/components/component_right_sidebar.R,156,selected_population_id,read,id <- selected_population_id(); req(id)
+Contents/R/interface/components/component_right_sidebar.R,157,selected_population_id,write_or_call,shared$populations$remove(id); selected_population_id(NULL)
+Contents/R/interface/page_gating.R,160,pending_gate_drop,write_or_call,"pending_gate_drop(list(type = ""sample"", gate_ids = gate_ids, conflict_gate_id = gid, sample_id = sample_id, parent_id = parent_id, overwrite_id = hits[[1]]))"
+Contents/R/interface/page_gating.R,188,pending_gate_drop,write_or_call,"pending_gate_drop(list(type = ""group"", gate_ids = gate_ids, group_id = group_id, conflicts = conflicts))"
+Contents/R/interface/page_gating.R,303,axis_modal_axis,write_or_call,axis_modal_axis(axis)
+Contents/R/interface/page_gating.R,332,axis_modal_axis,read,axis <- axis_modal_axis()
+Contents/R/interface/page_gating.R,453,polygon_points,write_or_call,polygon_points(canvas_points_df(pts))
+Contents/R/interface/page_gating.R,455,polygon_points,write_or_call,"observeEvent(input$clear_polygon, polygon_points(data.frame(x = numeric(), y = numeric())))"
+Contents/R/interface/page_gating.R,481,polygon_points,read,pts <- polygon_points()
+Contents/R/interface/page_gating.R,564,axis_modal_axis,read,axis <- axis_modal_axis()
+Contents/R/interface/page_gating.R,610,polygon_points,write_or_call,"polygon_points(data.frame(x = numeric(), y = numeric()))"
+Contents/R/interface/page_gating.R,634,polygon_points,write_or_call,"polygon_points(data.frame(x = numeric(), y = numeric()))"
+Contents/R/interface/page_gating.R,658,polygon_points,write_or_call,"polygon_points(data.frame(x = numeric(), y = numeric()))"
+Contents/R/interface/page_gating.R,737,polygon_points,read,"polygon = if (nrow(polygon_points())) split(polygon_points(), seq_len(nrow(polygon_points()))) else list(),"
+Contents/R/interface/page_gating.R,782,navigator_selected_gates,read,ids <- navigator_selected_gates()
+Contents/R/interface/page_gating.R,890,navigator_selected_gates,read,selected <- navigator_selected_gates()
+Contents/R/interface/page_gating.R,936,navigator_selected_gates,read,cur <- navigator_selected_gates()
+Contents/R/interface/page_gating.R,946,navigator_selected_gates,write_or_call,navigator_selected_gates(cur)
+Contents/R/interface/page_gating.R,954,navigator_selected_gates,read,gate_ids <- navigator_selected_gates()
+Contents/R/interface/page_gating.R,968,pending_gate_drop,read,drop <- pending_gate_drop()
+Contents/R/interface/page_gating.R,977,pending_gate_drop,write_or_call,pending_gate_drop(NULL)
+Contents/R/interface/page_gating.R,1004,gate_preview_windows,read,"mode = gate_preview_windows()[[win_id]]$mode %||% ""pseudocolor"","
+Contents/R/interface/page_gating.R,1024,gate_preview_windows,read,wins <- gate_preview_windows()
+Contents/R/interface/page_gating.R,1027,gate_preview_windows,write_or_call,gate_preview_windows(wins)
+Contents/R/interface/page_gating.R,1034,gate_preview_windows,read,wins <- gate_preview_windows()
+Contents/R/interface/page_gating.R,1036,gate_preview_windows,write_or_call,gate_preview_windows(wins)
+Contents/R/interface/page_gating.R,1041,gate_preview_windows,read,wins <- gate_preview_windows()
+Contents/R/interface/page_gating.R,1051,gate_preview_windows,write_or_call,gate_preview_windows(wins)
+Contents/R/interface/page_gating.R,1055,gate_preview_windows,read,wins <- gate_preview_windows()
+Contents/R/interface/page_gating.R,1060,gate_preview_windows,write_or_call,gate_preview_windows(wins)
+Contents/R/interface/page_gating.R,1066,gate_preview_windows,read,wins <- gate_preview_windows()
+Contents/R/interface/page_gating.R,1104,gate_preview_windows,read,wins <- gate_preview_windows()
+Contents/R/interface/page_gating_concat.R,99,preprocess_result,write_or_call,shared$pipeline$preprocess_result(list(
+Contents/R/interface/page_gating_concat.R,110,parity_result,write_or_call,shared$pipeline$parity_result(parity)
+Contents/R/interface/page_gating_concat.R,115,preprocess_result,read,pr <- shared$pipeline$preprocess_result()
+Contents/R/interface/page_gating_concat.R,132,concat_object,write_or_call,"shared$pipeline$concat_object(flowjo_build_concat_object(dat, marker_cols = marker_cols))"
+Contents/R/interface/page_gating_concat.R,133,concat_markers,write_or_call,shared$pipeline$concat_markers(marker_cols)
+Contents/R/interface/page_gating_concat.R,134,concat_data,write_or_call,shared$pipeline$concat_data(dat)
+Contents/R/interface/page_gating_concat.R,138,concat_object,read,sce <- shared$pipeline$concat_object()
+Contents/R/interface/page_gating_concat.R,144,concat_markers,read,req(shared$pipeline$concat_markers())
+Contents/R/interface/page_gating_concat.R,145,concat_markers,read,mk <- shared$pipeline$concat_markers()
+Contents/R/interface/page_gating_concat.R,152,concat_data,read,dat <- shared$pipeline$concat_data()
+Contents/R/interface/page_gating_concat.R,153,concat_markers,read,mk <- shared$pipeline$concat_markers()
+Contents/R/interface/page_gating_concat.R,164,concat_data,read,dat <- shared$pipeline$concat_data()
+Contents/R/interface/page_gating_concat.R,170,cluster_result,write_or_call,shared$pipeline$cluster_result(cl)
+Contents/R/interface/page_gating_concat.R,174,cluster_result,read,cl <- shared$pipeline$cluster_result()
+Contents/R/interface/page_gating_concat.R,183,cluster_result,read,cl <- shared$pipeline$cluster_result()
+Contents/R/interface/page_gating_concat.R,189,cluster_result,read,cl <- shared$pipeline$cluster_result()
+Contents/R/interface/page_gating_concat.R,195,parity_result,read,p <- shared$pipeline$parity_result()
+Contents/R/interface/page_import_export.R,25,inventory,write_or_call,inventory(flowjo_reference_inventory(input$ref_path))
+Contents/R/interface/page_import_export.R,28,inventory,read,"DT::datatable(inventory(), options = list(pageLength = 15, scrollX = TRUE), rownames = FALSE)"
+Contents/R/interface/page_import_export.R,31,inventory,read,inv <- inventory()
+Contents/R/interface/page_umap_flowsom.R,156,default_channels_signature,read,"is_new_signature <- !identical(default_channels_signature(), sig)"
+Contents/R/interface/page_umap_flowsom.R,160,default_channels_signature,write_or_call,default_channels_signature(sig)
+Contents/R/interface/page_umap_flowsom.R,181,run_state,read,st <- run_state()
+Contents/R/interface/page_umap_flowsom.R,222,run_state,write_or_call,"run_state(""running"")"
+Contents/R/interface/page_umap_flowsom.R,223,run_state,write_or_call,"on.exit(run_state(""idle""), add = TRUE)"
