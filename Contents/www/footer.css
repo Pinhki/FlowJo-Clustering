@@ -1,11 +1,11 @@
 /* Footer Styles */
 .footer {
-  border-top: 1px solid #d7d7d7;
-  background: #efefef;
+  border-top: 0;
+  background: var(--Pinhki-footer-bg, #f5f5f5);
   padding: 6px 8px;
   margin-top: auto;
   text-align: center;
-  color: #5f6368;
+  color: var(--Pinhki-footer-text, #5f6368);
   font-size: 0.70rem;
   line-height: 1.2;
   width: 100%;
@@ -36,14 +36,14 @@
 }
 
 .footer-inner a {
-  color: #4f565c;
+  color: var(--Pinhki-footer-link, #4f565c);
   text-decoration: none;
   font-weight: 600;
   transition: color 0.2s ease;
 }
 
 .footer-inner a:hover {
-  color: #1f2937;
+  color: var(--Pinhki-footer-link-hover, #1f2937);
   text-decoration: underline;
 }
 
@@ -53,20 +53,20 @@
 
 /* Dark mode footer parity */
 body.app-dark-mode .footer {
-  border-top: 1px solid #2f2f2f;
-  background: #171717;
-  color: #a5a5a5;
+  border-top: 0;
+  background: var(--Pinhki-footer-bg-dark, #171717);
+  color: var(--Pinhki-footer-text-dark, #a5a5a5);
 }
 
 body.app-dark-mode .footer-inner,
 body.app-dark-mode .footer-inner span {
-  color: #a5a5a5;
+  color: var(--Pinhki-footer-text-dark, #a5a5a5);
 }
 
 body.app-dark-mode .footer-inner a {
-  color: #c0c0c0;
+  color: var(--Pinhki-footer-link-dark, #c0c0c0);
 }
 
 body.app-dark-mode .footer-inner a:hover {
-  color: #f0f0f0;
+  color: var(--Pinhki-footer-link-hover-dark, #f0f0f0);
 }

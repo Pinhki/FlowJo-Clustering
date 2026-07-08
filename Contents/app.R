@@ -14,18 +14,82 @@ ui <- tagList(
   tags$head(
     tags$script(HTML("
       (function () {
+        function syncPinhkiTabPills() {
+          var navs = document.querySelectorAll(
+            '.Pinhki-tabs, .tabbable > .nav.nav-tabs, .tabbable > .nav.nav-pills, ' +
+            '.app-tabs-wrap .nav.nav-tabs, .app-tabs-wrap .nav.nav-pills'
+          );
+          for (var i = 0; i < navs.length; i++) {
+            var nav = navs[i];
+            if (!nav) continue;
+            nav.classList.add('Pinhki-tab-pill-track', 'app-tab-pill-track');
+            if (!nav.dataset.PinhkiPillScrollBound) {
+              nav.addEventListener('scroll', syncPinhkiTabPills, { passive: true });
+              nav.dataset.PinhkiPillScrollBound = '1';
+            }
+            var active = nav.querySelector('li.active > a, .nav-item.active > a, .nav-link.active');
+            if (!active) {
+              nav.style.setProperty('--Pinhki-tab-pill-w', '0px');
+              nav.style.setProperty('--app-tab-pill-w', '0px');
+              continue;
+            }
+            var activeItem = active.closest('li, .nav-item');
+            var x = ((activeItem ? activeItem.offsetLeft : 0) + active.offsetLeft) + nav.scrollLeft;
+            var w = active.offsetWidth;
+            nav.style.setProperty('--Pinhki-tab-pill-x', (Number.isFinite(x) ? x : 0) + 'px');
+            nav.style.setProperty('--Pinhki-tab-pill-w', (Number.isFinite(w) ? w : 0) + 'px');
+            nav.style.setProperty('--app-tab-pill-x', (Number.isFinite(x) ? x : 0) + 'px');
+            nav.style.setProperty('--app-tab-pill-w', (Number.isFinite(w) ? w : 0) + 'px');
+          }
+        }
         function syncLayoutHeightVars() {
           var nav = document.querySelector('.navbar');
           var footer = document.querySelector('.footer');
-          var navH = nav ? Math.ceil(nav.getBoundingClientRect().height || 56) : 56;
+          var navRect = nav ? nav.getBoundingClientRect() : null;
+          var isDesktopRail = !!(
+            navRect &&
+            window.innerWidth > 991 &&
+            window.matchMedia('(orientation: landscape)').matches &&
+            navRect.height >= (window.innerHeight * 0.75) &&
+            navRect.width <= 140
+          );
+          var navH = navRect ? Math.ceil(navRect.height || 56) : 56;
+          if (isDesktopRail) navH = 0;
           var footerH = footer ? Math.ceil(footer.getBoundingClientRect().height || 0) : 0;
           document.documentElement.style.setProperty('--nav-h', navH + 'px');
+          if (navRect) document.documentElement.style.setProperty('--nav-rail-h', Math.ceil(navRect.height || 0) + 'px');
           document.documentElement.style.setProperty('--footer-h', footerH + 'px');
         }
+        function collapseSidebarInPortrait() {
+          var isPortrait = window.matchMedia('(max-width: 991.98px), (orientation: portrait)').matches;
+          if (!isPortrait) return;
+          var sidebar = document.querySelector('.bslib-sidebar-layout.sidebar-right');
+          if (!sidebar || sidebar.classList.contains('sidebar-collapsed')) return;
+          var toggle = sidebar.querySelector('.collapse-toggle, .bslib-sidebar-toggle');
+          if (toggle) toggle.click();
+        }
         window.addEventListener('load', syncLayoutHeightVars);
-        window.addEventListener('resize', syncLayoutHeightVars);
+        window.addEventListener('load', syncPinhkiTabPills);
+        window.addEventListener('resize', function(){
+          syncLayoutHeightVars();
+          syncPinhkiTabPills();
+          collapseSidebarInPortrait();
+        });
+        document.addEventListener('shiny:connected', function(){
+          syncLayoutHeightVars();
+          syncPinhkiTabPills();
+          collapseSidebarInPortrait();
+        });
+        document.addEventListener('shown.bs.tab', syncPinhkiTabPills);
+        document.addEventListener('shiny:bound', syncPinhkiTabPills);
+        document.addEventListener('shiny:value', syncPinhkiTabPills);
         document.addEventListener('shown.bs.collapse', syncLayoutHeightVars);
-        setTimeout(syncLayoutHeightVars, 50);
+        setTimeout(function(){
+          syncLayoutHeightVars();
+          syncPinhkiTabPills();
+          collapseSidebarInPortrait();
+        }, 50);
+        setTimeout(syncPinhkiTabPills, 250);
       })();
     "))
     ,
@@ -63,8 +127,13 @@ ui <- tagList(
     id = "main_nav",
     theme = my_theme,
     import_ui = import_page_ui("import"),
+    workspace_ui = workspace_page_ui("workspace"),
+    compensation_ui = compensation_page_ui("compensation"),
+    gating_ui = gating_page_ui("gating"),
+    stats_ui = statistics_page_ui("statistics"),
+    layout_ui = layout_editor_page_ui("layout"),
+    import_export_ui = import_export_page_ui("import_export"),
     feature_ui = feature_page_ui("feature"),
-    flowsom_ui = flowsom_page_ui("flowsom"),
     umap_ui = umap_flowsom_page_ui("umap"),
     pipeline_ui = flowjo_pipeline_page_ui("pipeline"),
     right_sidebar_ui = right_sidebar_ui("sidebar"),
@@ -80,9 +149,9 @@ server <- function(input, output, session) {
 
   observeEvent(shared$fcs$auto_switch_to_umap(), {
     if (isTRUE(shared$fcs$auto_switch_to_umap())) {
-      shiny::updateNavbarPage(session = session, inputId = "main_nav", selected = "umap_tab")
+      shiny::updateNavbarPage(session = session, inputId = "main_nav", selected = "gating_tab")
       shared$fcs$clear_auto_switch_to_umap()
-      showNotification("No UMAP columns found in loaded FCS. Switched to UMAP + FlowSOM tab.", type = "message")
+      showNotification("No UMAP or imported gates found. Switched to Gating.", type = "message")
     }
   }, ignoreInit = TRUE)
 
@@ -90,7 +159,7 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       title = "FlowJo Re-plotting Tool",
       easyClose = TRUE,
-      p("Import FCS first, then use Feature Plots, FlowSOM, or UMAP + FlowSOM tabs."),
+      p("Import FCS first, then create an analysis object for Feature Plots and Cluster runs."),
       p("Global settings and workspace save/load are in the right sidebar."),
       footer = modalButton("Close")
     ))
@@ -171,8 +240,13 @@ server <- function(input, output, session) {
   observeEvent(input$sh_axis_text_size, shared$params$axis_text_size(input$sh_axis_text_size),   ignoreInit = TRUE)
 
   import_page_server("import", shared)
+  workspace_page_server("workspace", shared)
+  compensation_page_server("compensation", shared)
+  gating_page_server("gating", shared)
+  statistics_page_server("statistics", shared)
+  layout_editor_page_server("layout", shared)
+  import_export_page_server("import_export", shared)
   feature_page_server("feature", shared)
-  flowsom_page_server("flowsom", shared)
   umap_flowsom_page_server("umap", shared)
   flowjo_pipeline_page_server("pipeline", shared)
 }

@@ -20,6 +20,29 @@ find_axis_pairs <- function(columns) {
   data.frame(x = sapply(uniq, `[`, 1), y = sapply(uniq, `[`, 2))
 }
 
+flowjo_recluster_flowsom <- function(fsom_result, k, seed = 42L) {
+  if (is.null(fsom_result$codes) || is.null(fsom_result$node_id)) {
+    stop("Stored FlowSOM map is not available; rerun FlowSOM + UMAP.")
+  }
+  codes <- as.matrix(fsom_result$codes)
+  k_i <- min(max(2L, as.integer(k)), max(2L, nrow(codes) - 1L))
+  seed_i <- as.integer(seed %||% 42L)
+  meta_method <- "consensus"
+  meta <- tryCatch(
+    FlowSOM::metaClustering_consensus(codes, k = k_i, seed = seed_i),
+    error = function(e) {
+      meta_method <<- "kmeans_fallback"
+      stats::kmeans(codes, centers = k_i, iter.max = 100, nstart = 10)$cluster
+    }
+  )
+  list(
+    cluster = as.integer(meta[fsom_result$node_id]),
+    meta = meta,
+    k_used = k_i,
+    meta_method = meta_method
+  )
+}
+
 flowsom_cluster <- function(df, features, xdim=10, ydim=10, rlen=10, seed=1234, scale_data=TRUE, k=20) {
   stopifnot(length(features) >= 2)
   mat <- as.matrix(df[, features, drop = FALSE])
@@ -73,9 +96,15 @@ flowsom_cluster <- function(df, features, xdim=10, ydim=10, rlen=10, seed=1234, 
     km <- stats::kmeans(mat, centers = k_direct, iter.max = max(50L, rlen_i * 10L), nstart = 10)
     return(list(
       cluster = as.integer(km$cluster),
+      node_id = as.integer(km$cluster),
       fsom = NULL,
+      codes = stats::aggregate(mat, list(cluster = km$cluster), mean)[, -1, drop = FALSE],
       meta = seq_len(k_direct),
       k_used = k_direct,
+      xdim = xdim_i,
+      ydim = ydim_i,
+      rlen = rlen_i,
+      seed = seed_i,
       meta_method = "direct_kmeans_fallback"
     ))
   }
@@ -107,7 +136,19 @@ flowsom_cluster <- function(df, features, xdim=10, ydim=10, rlen=10, seed=1234, 
   )
   node_idx <- fsom$map$mapping[,1]
   clusters <- meta[node_idx]
-  list(cluster = as.integer(clusters), fsom = fsom, meta = meta, k_used = k_i, meta_method = meta_method)
+  list(
+    cluster = as.integer(clusters),
+    node_id = as.integer(node_idx),
+    fsom = fsom,
+    codes = codes,
+    meta = meta,
+    k_used = k_i,
+    xdim = xdim_i,
+    ydim = ydim_i,
+    rlen = rlen_i,
+    seed = seed_i,
+    meta_method = meta_method
+  )
 }
 
 apply_theme <- function(p, scale_factor = 1, theme_choice = "UMAP Arrows",

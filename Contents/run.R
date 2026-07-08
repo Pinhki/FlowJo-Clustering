@@ -1,5 +1,5 @@
 # This script prepares the environment with the CORE UI packages,
-# then launches the main scRNA-seq analysis application.
+# then launches the main FlowJo clustering application.
 # --- Step 1: Find this script's own location and set the working directory ---
 # This is the most robust way to ensure all relative paths in the app work correctly,
 # regardless of how or from where this script is launched.
@@ -34,6 +34,7 @@ core_ui_packages <- c(
   "plotly",
   "htmlwidgets",
   "svglite",
+  "qs2",
   "shinyjs",
   "colourpicker",
   "ggplot2",
@@ -67,14 +68,6 @@ for (pkg in core_ui_packages) {
 
 message("--- Core UI packages are ready. ---")
 message("")
-'
-if (!requireNamespace("loupeR", quietly = F)) {
-  remotes::install_github("10xGenomics/loupeR", force = T)
-}
-'
-
-#loupeR::setup() #Type y and ENTER to agree to 10x's EULA.
-
 
 # --- Stage 2: Launch the Shiny Application ---
 message("Starting the application... Your web browser should open shortly.")
@@ -84,7 +77,7 @@ tryCatch({
   
   # This is the command that launches your app.
   shiny::runApp(
-    appDir = here("app.R"), 
+    appDir = getwd(), 
     launch.browser = TRUE
   )
   

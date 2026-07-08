@@ -1,237 +1,250 @@
-# R/page_umap_flowsom.R
 umap_flowsom_page_ui <- function(id) {
   ns <- NS(id)
-  div(class = "card-page-wrap",
+  div(class = "card-page-wrap analysis-cluster-page",
     card_page_header(
-      "UMAP + FlowSOM (Compute)",
-      subtitle = "Pick channels, compute UMAP with uwot, cluster with FlowSOM (no Seurat), then optionally send to FlowSOM page."
+      "Cluster",
+      subtitle = "Create named clustering runs from an analysis object, or import FlowSOM cluster labels."
     ),
-    uiOutput(ns("gate_notice")),
-    fluidRow(
-      column(3, card_page_card("Run Configuration",
-             tags$div(class = "card-subsection-title", "Features & UMAP"),
-             uiOutput(ns("channels_picker")),
-             p(class = "control-note", "Choose markers used to build the UMAP map. More relevant markers usually give clearer separation."),
-             numericInput(ns("seed"), "Seed", value = 42, min = 1, step = 1),
-             p(class = "control-note", "Recommended seed: 42 for reproducible runs and consistent comparison across iterations."),
-             numericInput(ns("neighbors"), "UMAP n_neighbors", value = 15, min = 2, step = 1),
-             p(class = "control-note", "Controls local vs global structure. Lower = local detail; higher = smoother global pattern."),
-             numericInput(ns("min_dist"), "UMAP min_dist", value = 0.3, min = 0, max = 1, step = 0.05),
-             p(class = "control-note", "Controls how tightly points can pack. Lower = tighter clusters; higher = more spread-out layout."),
-             selectInput(ns("metric"), "UMAP metric", choices = c("euclidean","manhattan","cosine"), selected = "euclidean"),
-             p(class = "control-note", "Distance rule used to compare cells. Use cosine when marker scales differ a lot."),
-             checkboxInput(ns("scale"), "Z-score scale channels", value = TRUE),
-             p(class = "control-note", "Standardizes markers to comparable scale so high-range channels do not dominate."),
-             radioButtons(ns("view_mode"), "View mode", choices = c("2D" = "2d", "3D (interactive)" = "3d"), selected = "2d", inline = TRUE),
-             p(class = "control-note", "Switch between static 2D and interactive 3D preview."),
-             uiOutput(ns("color_by_ui")),
-             hr(),
-             tags$div(class = "card-subsection-title", "FlowSOM"),
-             numericInput(ns("xdim"), "SOM xdim", value = 10, min = 3, step = 1),
-             p(class = "control-note", "Grid width for initial SOM map. Larger grid can capture finer patterns but may be noisier."),
-             numericInput(ns("ydim"), "SOM ydim", value = 10, min = 3, step = 1),
-             p(class = "control-note", "Grid height for initial SOM map. Together with xdim, this sets SOM map size."),
-             numericInput(ns("rlen"), "Training iterations (rlen)", value = 10, min = 1, step = 1),
-             p(class = "control-note", "How long FlowSOM trains. Higher can stabilize clusters but takes longer."),
-             numericInput(ns("k"), "Meta-clusters (k)", value = 20, min = 2, step = 1),
-             p(class = "control-note", "Final number of cluster groups. Higher k gives finer splits; lower k gives broader groups."),
-             actionButton(ns("run"), "Run UMAP + FlowSOM", class = "btn btn-primary"),
-             br(), br(),
-             actionButton(ns("send"), "Send clusters to FlowSOM page", class = "btn btn-success")
-      )),
-      column(9, tagList(
-        card_page_card("Preview",
-             uiOutput(ns("run_notice")),
-             uiOutput(ns("preview_plot_ui"))
+    uiOutput(ns("object_header")),
+    fluidRow(class = "analysis-cluster-layout",
+      column(
+        4,
+        class = "analysis-controls-col",
+        card_page_card(
+          "Create Run",
+          div(class = "app-tabs-wrap",
+            navset_pill(
+              id = ns("cluster_mode"),
+              nav_panel(
+                "Compute",
+                textInput(ns("run_name"), "Run name", value = ""),
+                div(class = "Pinhki-inline-note", tags$b("Name required. "), "Runs are saved under the selected analysis object and keep their parameters fixed."),
+                uiOutput(ns("channels_picker")),
+                numericInput(ns("seed"), "Seed", value = 42, min = 1, step = 1),
+                numericInput(ns("neighbors"), "UMAP n_neighbors", value = 15, min = 2, step = 1),
+                numericInput(ns("min_dist"), "UMAP min_dist", value = 0.3, min = 0, max = 1, step = 0.05),
+                selectInput(ns("metric"), "UMAP metric", choices = c("euclidean", "manhattan", "cosine"), selected = "euclidean"),
+                checkboxInput(ns("scale"), "Z-score scale channels", value = TRUE),
+                tags$div(class = "card-subsection-title", "FlowSOM"),
+                numericInput(ns("xdim"), "SOM xdim", value = 10, min = 3, step = 1),
+                numericInput(ns("ydim"), "SOM ydim", value = 10, min = 3, step = 1),
+                numericInput(ns("rlen"), "Training iterations (rlen)", value = 10, min = 1, step = 1),
+                numericInput(ns("k"), "Meta-clusters (k)", value = 20, min = 2, step = 1),
+                actionButton(ns("run"), "Run UMAP + FlowSOM", class = "btn btn-primary w-100")
+              ),
+              nav_panel(
+                "Import",
+                textInput(ns("import_run_name"), "Run name", value = ""),
+                fileInput(ns("flowsom_file"), "Upload FlowSOM CSV", accept = ".csv"),
+                div(class = "Pinhki-inline-note", tags$b("Imported run. "), "The CSV must have the same row count as the selected analysis object."),
+                actionButton(ns("import_run"), "Import FlowSOM Run", class = "btn btn-primary w-100")
+              )
+            )
+          )
         ),
-        card_page_card("Export", uiOutput(ns("export_ui")))
-      ))
+        card_page_card("Object Notes", uiOutput(ns("object_notes")))
+      ),
+      column(
+        8,
+        class = "analysis-preview-col",
+        card_page_card(
+          "Preview & Export",
+          uiOutput(ns("run_selector")),
+          uiOutput(ns("run_notice")),
+          radioButtons(ns("view_mode"), "View mode", choices = c("2D" = "2d", "3D interactive" = "3d"), selected = "2d", inline = TRUE),
+          uiOutput(ns("axis_ui")),
+          uiOutput(ns("color_by_ui")),
+          uiOutput(ns("preview_plot_ui")),
+          hr(),
+          uiOutput(ns("export_ui"))
+        )
+      )
     )
   )
 }
 
 umap_flowsom_page_server <- function(id, shared) {
-
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     run_state <- reactiveVal("idle")
-    default_channels_signature <- reactiveVal(NULL)
-    # Gate message (requires FCS)
-    output$gate_notice <- renderUI({
-      if (is.null(shared$df$raw())) {
-        div(class="alert alert-info",
-            strong("No data yet — "), "Please add an FCS from the right sidebar."
-        )
-      } else NULL
+
+    active_object <- reactive(shared$analysis$active())
+
+    active_run <- reactive({
+      obj <- active_object()
+      if (is.null(obj) || is.null(obj$active_run_id)) return(NULL)
+      obj$runs[[obj$active_run_id]]
     })
 
-    candidate_group_cols <- reactive({
-      df <- shared$df$raw()
-      if (is.null(df)) return(character(0))
-      nms <- colnames(df)
-      if (is.null(nms) || !length(nms)) return(character(0))
-      # likely concatenated FCS group/sample fields
-      likely <- nms[grepl("sample|group|condition|batch|donor|patient|id", nms, ignore.case = TRUE)]
-      is_discrete <- vapply(df[nms], function(x) {
-        ux <- unique(as.character(x))
-        length(ux) > 1 && length(ux) <= 128
-      }, logical(1))
-      keep <- intersect(nms[is_discrete], likely)
-      unique(keep)
+    run_name_exists <- function(obj, name) {
+      run_names <- vapply(obj$runs %||% list(), function(x) x$name %||% "", character(1))
+      name %in% run_names
+    }
+
+    available_sources <- reactive({
+      choices <- character(0)
+      raw <- shared$df$raw()
+      if (!is.null(raw) && ncol(raw) > 0) choices["FCS event table"] <- "fcs"
+      batch <- shared$pipeline$concat_data()
+      if (!is.null(batch) && ncol(batch) > 0) choices["Batch concatenation"] <- "batch"
+      choices
     })
 
-    output$color_by_ui <- renderUI({
-      req(input$view_mode)
-      if (!identical(input$view_mode, "3d")) return(NULL)
-      cols <- c("FlowSOM_Cluster", candidate_group_cols())
-      cols <- unique(cols)
-      selectInput(ns("color_by"), "3D color by", choices = cols, selected = "FlowSOM_Cluster")
-    })
-    # Populate channel choices from shared data
-    output$channels_picker <- renderUI({
-      num_choices <- shared$choices$numeric()
-      req(num_choices)
-      sig <- paste(num_choices, collapse = "||")
-      current <- isolate(input$channels %||% character(0))
-      keep <- intersect(current, num_choices)
-
-      choice_names <- lapply(num_choices, function(nm) {
-        tags$div(class = "channel-card-option", nm)
-      })
-
-      pick_default_channels <- function(df, ch_names, max_n = 14L) {
-        if (is.null(df) || !nrow(df) || !length(ch_names)) return(head(ch_names, min(length(ch_names), max_n)))
-
-        score_one <- function(ch) {
-          x <- df[[ch]]
-          if (is.null(x)) return(-Inf)
-
-          ch_low <- tolower(ch)
-          s <- 0
-
-          # Strong positive signal for marker-like channels.
-          if (grepl("^(cd\\d+|ccr\\d+|cxcr\\d+|pd\\d+|ctla\\d+|hla|ifn|tnf|il\\d+|foxp\\d+|ki67|cd45ra|cd45ro)", ch_low)) s <- s + 3
-
-          # Strong negative signal for known non-UMAP feature families.
-          if (grepl("(^|[_\\-\\s])(fsc|ssc)([_\\-\\s]|$)", ch_low)) s <- s - 6
-          if (grepl("time|event|index|acq|acquisition", ch_low)) s <- s - 5
-          if (grepl("live\\s*dead|viability|debris|singlet|doublet|dna", ch_low)) s <- s - 4
-          if (grepl("sample|group|condition|batch|donor|patient|subject|barcode|well|file|origin|meta", ch_low)) s <- s - 5
-          if (grepl("(^|[_\\-\\s])(w|h|a|width|height|area|length)([_\\-\\s]|$)", ch_low)) s <- s - 2
-
-          # Data-driven checks (smart fallback beyond names).
-          if (!is.numeric(x)) return(s - 8)
-          x_ok <- x[is.finite(x)]
-          if (length(x_ok) < 10) return(s - 6)
-
-          uq <- length(unique(x_ok))
-          uq_ratio <- uq / length(x_ok)
-          iqr_x <- stats::IQR(x_ok)
-
-          # Likely metadata/ID-ish numeric columns: very low unique ratio.
-          if (uq_ratio < 0.005) s <- s - 5
-          if (uq_ratio < 0.02) s <- s - 2
-
-          # Flat/near-flat channels are poor for UMAP.
-          if (!is.finite(iqr_x) || iqr_x == 0) s <- s - 4
-          if (is.finite(iqr_x) && iqr_x > 0) s <- s + 1
-
-          s
-        }
-
-        scores <- vapply(ch_names, score_one, numeric(1))
-        ord <- order(scores, decreasing = TRUE, na.last = TRUE)
-        ranked <- ch_names[ord]
-        ranked_scores <- scores[ord]
-
-        # Keep channels with at least neutral score first.
-        picked <- ranked[ranked_scores >= 0]
-        if (!length(picked)) picked <- ranked[ranked_scores > -2]
-        if (!length(picked)) picked <- ranked
-
-        head(unique(picked), min(length(picked), max_n))
+    show_create_object_modal <- function(source = NULL) {
+      choices <- available_sources()
+      selected <- source %||% unname(choices)[1]
+      if (!length(choices)) {
+        showModal(modalDialog(
+          title = "Create Analysis Object",
+          div(class = "Pinhki-inline-note", tags$b("No source data available. "), "Import FCS data or build a batch concatenation first."),
+          footer = tagList(modalButton("Close"))
+        ))
+        return()
       }
+      showModal(modalDialog(
+        title = "Create Analysis Object",
+        textInput(ns("new_object_name"), "Object name", value = ""),
+        selectInput(ns("new_object_source"), "Source", choices = choices, selected = selected),
+        div(class = "Pinhki-inline-note", tags$b("Snapshot saved. "), "The object keeps a full copy of the selected source data for reproducible named runs."),
+        footer = tagList(modalButton("Cancel"), actionButton(ns("confirm_create_object"), "Create Object", class = "btn btn-primary")),
+        easyClose = TRUE
+      ))
+    }
 
-      # Apply smart defaults once per dataset/channel set refresh, then preserve manual edits.
-      is_new_signature <- !identical(default_channels_signature(), sig)
-      if (is_new_signature || !length(keep)) {
-        keep <- pick_default_channels(shared$df$raw(), num_choices, max_n = 14L)
-        if (length(keep) < 2) keep <- head(num_choices, min(10, length(num_choices)))
-        default_channels_signature(sig)
+    output$object_header <- renderUI({
+      objs <- shared$analysis$objects()
+      if (!length(objs)) {
+        return(div(class = "analysis-object-header",
+          div(class = "Pinhki-inline-note", tags$b("Create an analysis object first. "), "Use Import or Batch Concatenation to prepare data, then create an object for clustering."),
+          actionButton(ns("create_object"), "Create Analysis Object", class = "btn btn-primary")
+        ))
       }
-
-      div(
-        class = "channel-card-picker-wrap",
-        tags$div(class = "channel-picker-title", "Channels"),
-        div(
-          class = "channel-card-picker",
-          checkboxGroupInput(
-            ns("channels"),
-            label = NULL,
-            choiceNames = choice_names,
-            choiceValues = num_choices,
-            selected = keep,
-            width = "100%"
-          )
-        )
+      choices <- stats::setNames(names(objs), vapply(objs, function(x) x$name %||% x$id, character(1)))
+      div(class = "analysis-object-header",
+        selectInput(ns("active_object"), NULL, choices = choices, selected = shared$analysis$active_id(), width = "280px"),
+        actionButton(ns("create_object"), "New Object", class = "btn btn-outline-primary")
       )
     })
 
-    output$run_notice <- renderUI({
-      st <- run_state()
-      if (identical(st, "running")) {
-        return(
-          div(class = "alert alert-warning",
-              tags$strong("Running UMAP + FlowSOM... "),
-              "Please wait. Results will appear automatically when compute finishes."
-          )
-        )
+    observeEvent(input$create_object, {
+      show_create_object_modal()
+    })
+
+    observeEvent(input$confirm_create_object, {
+      name <- trimws(input$new_object_name %||% "")
+      source <- input$new_object_source %||% ""
+      if (!nzchar(name)) {
+        showNotification("Object name is required.", type = "warning")
+        return()
       }
-      if (is.null(shared$umap$df())) {
-        return(
-          div(class = "alert alert-info",
-              tags$strong("Need to run compute first. "),
-              "Click ",
-              tags$code("Run UMAP + FlowSOM"),
-              " to generate UMAP coordinates and clusters for this preview card."
-          )
-        )
+      tryCatch({
+        obj <- shared$analysis$create(name = name, source = source)
+        removeModal()
+        showNotification(sprintf("Created analysis object: %s", obj$name), type = "message")
+      }, error = function(e) {
+        showNotification(conditionMessage(e), type = "error", duration = 10)
+      })
+    })
+
+    observeEvent(input$active_object, {
+      req(input$active_object)
+      shared$analysis$set_active(input$active_object)
+    }, ignoreInit = TRUE)
+
+    output$object_notes <- renderUI({
+      obj <- active_object()
+      if (is.null(obj)) {
+        return(div(class = "Pinhki-inline-note", tags$b("No object selected. "), "Create or import an analysis object before clustering."))
+      }
+      tagList(
+        div(class = "Pinhki-inline-note",
+          tags$b(obj$source_badge %||% "Object"), " source, ",
+          format(nrow(obj$data), big.mark = ","), " events, ",
+          length(obj$markers %||% character(0)), " numeric markers."
+        ),
+        if (nzchar(obj$notes %||% "")) p(class = "control-note", obj$notes)
+      )
+    })
+
+    output$channels_picker <- renderUI({
+      obj <- active_object()
+      if (is.null(obj)) {
+        return(div(class = "Pinhki-inline-note", tags$b("No analysis object. "), "Create an object before selecting markers."))
+      }
+      markers <- obj$markers %||% character(0)
+      selected <- intersect(obj$selected_markers %||% flowjo_default_cluster_markers(markers), markers)
+      checkboxGroupInput(ns("channels"), "Markers for clustering", choices = markers, selected = selected, width = "100%")
+    })
+
+    output$run_selector <- renderUI({
+      obj <- active_object()
+      runs <- obj$runs %||% list()
+      if (is.null(obj) || !length(runs)) return(NULL)
+      choices <- stats::setNames(names(runs), vapply(runs, function(x) x$name %||% x$id, character(1)))
+      div(class = "analysis-run-header",
+        selectInput(ns("active_run"), "Selected run", choices = choices, selected = obj$active_run_id, width = "280px")
+      )
+    })
+
+    observeEvent(input$active_run, {
+      req(input$active_run)
+      shared$analysis$set_active_run(run_id = input$active_run)
+    }, ignoreInit = TRUE)
+
+    output$run_notice <- renderUI({
+      if (identical(run_state(), "running")) {
+        return(div(class = "Pinhki-inline-note", tags$b("Running UMAP + FlowSOM. "), "The named run will appear in the preview when finished."))
+      }
+      if (is.null(active_object())) {
+        return(div(class = "Pinhki-inline-note", tags$b("No analysis object. "), "Create or import an object before clustering."))
+      }
+      if (is.null(active_run())) {
+        return(div(class = "Pinhki-inline-note", tags$b("No run yet. "), "Use Compute or Import to create the first named run for this object."))
       }
       NULL
     })
 
-    output$preview_plot_ui <- renderUI({
-      req(input$view_mode)
-      if (identical(input$view_mode, "3d")) {
-        return(withSpinner(plotlyOutput(ns("plot3d"), height = "80vh")))
-      }
-      withSpinner(plotOutput(ns("plot"), height = "80vh"))
+    run_df <- reactive({
+      run <- active_run()
+      if (is.null(run)) return(NULL)
+      run$result$df
     })
-    
-    # Run UMAP + FlowSOM
+
+    output$preview_plot_ui <- renderUI({
+      df <- run_df()
+      if (is.null(df)) return(NULL)
+      if (identical(input$view_mode, "3d")) return(withSpinner(plotlyOutput(ns("plot3d"), height = "72vh")))
+      withSpinner(plotOutput(ns("plot"), height = "72vh"))
+    })
+
     observeEvent(input$run, {
-      if (is.null(shared$df$raw())) {
-        showNotification("No FCS data loaded. Please add an FCS file first.", type = "error", duration = 6)
-        return(invisible(NULL))
+      obj <- active_object()
+      if (is.null(obj)) {
+        showNotification("Create an analysis object before running clustering.", type = "error")
+        return()
       }
-      sel_channels <- input$channels %||% character(0)
+      run_name <- trimws(input$run_name %||% "")
+      if (!nzchar(run_name)) {
+        showNotification("Run name is required.", type = "warning")
+        return()
+      }
+      if (isTRUE(run_name_exists(obj, run_name))) {
+        showNotification("Run name must be unique within this object.", type = "warning")
+        return()
+      }
+      sel_channels <- intersect(input$channels %||% character(0), names(obj$data))
       if (length(sel_channels) < 2) {
-        showNotification("Select at least 2 channels before running UMAP + FlowSOM.", type = "warning", duration = 6)
-        return(invisible(NULL))
+        showNotification("Select at least 2 markers before running UMAP + FlowSOM.", type = "warning")
+        return()
       }
+
       run_state("running")
       on.exit(run_state("idle"), add = TRUE)
-      overlay_show(
-        text = "Running UMAP + FlowSOM...",
-        tip = "This can take time on large FCS files. The preview updates automatically when finished."
-      )
+      overlay_show("Running UMAP + FlowSOM...", tip = "This can take time on large analysis objects.")
       on.exit(overlay_hide(), add = TRUE)
 
       withProgress(message = "Computing UMAP + FlowSOM", value = 0, {
-        df <- shared$df$raw()
-        feats <- intersect(sel_channels, colnames(df))
-        validate(need(length(feats) >= 2, "Select at least two channels."))
-
+        df <- obj$data
         n_neighbors <- as.integer(input$neighbors %||% 15)
         min_dist <- as.numeric(input$min_dist %||% 0.3)
         seed_i <- as.integer(input$seed %||% 42)
@@ -240,216 +253,111 @@ umap_flowsom_page_server <- function(id, shared) {
         ydim_i <- as.integer(input$ydim %||% 10)
         rlen_i <- as.integer(input$rlen %||% 10)
         k_i <- as.integer(input$k %||% 20)
-
-        validate(need(is.finite(n_neighbors) && n_neighbors >= 2, "UMAP n_neighbors must be >= 2."))
-        validate(need(is.finite(min_dist) && min_dist >= 0 && min_dist <= 1, "UMAP min_dist must be between 0 and 1."))
-        validate(need(is.finite(seed_i) && seed_i >= 1, "Seed must be >= 1."))
-        validate(need(is.finite(xdim_i) && xdim_i >= 2, "SOM xdim must be >= 2."))
-        validate(need(is.finite(ydim_i) && ydim_i >= 2, "SOM ydim must be >= 2."))
-        validate(need(is.finite(rlen_i) && rlen_i >= 1, "Training iterations (rlen) must be >= 1."))
-        validate(need(is.finite(k_i) && k_i >= 2, "Meta-clusters (k) must be >= 2."))
-
-        mat <- as.matrix(df[, feats, drop = FALSE])
+        mat <- as.matrix(df[, sel_channels, drop = FALSE])
         if (isTRUE(input$scale)) mat <- scale(mat)
 
         incProgress(0.35, detail = "Running UMAP")
         set.seed(seed_i)
-        um <- uwot::umap(
-          X = mat,
-          n_neighbors = n_neighbors,
-          min_dist = min_dist,
-          metric = metric_i,
-          verbose = FALSE
-        )
-        colnames(um) <- c("UMAP_1","UMAP_2")
+        um <- uwot::umap(X = mat, n_neighbors = n_neighbors, min_dist = min_dist, metric = metric_i, verbose = FALSE)
+        colnames(um) <- c("UMAP_1", "UMAP_2")
 
-        incProgress(0.45, detail = "Running FlowSOM clustering")
-        fs_res <- flowsom_cluster(
-          df = df, features = feats,
-          xdim = xdim_i, ydim = ydim_i, rlen = rlen_i,
-          seed = seed_i, scale_data = isTRUE(input$scale), k = k_i
-        )
+        incProgress(0.45, detail = "Running FlowSOM")
+        fs_res <- flowsom_cluster(df = df, features = sel_channels, xdim = xdim_i, ydim = ydim_i, rlen = rlen_i, seed = seed_i, scale_data = isTRUE(input$scale), k = k_i)
 
-        incProgress(0.20, detail = "Saving results")
         out <- cbind(df, as.data.frame(um))
         out$FlowSOM_Cluster <- factor(fs_res$cluster)
-
-        shared$umap$df(out)
-        shared$umap$params(list(
-          seed = seed_i, neighbors = n_neighbors, min_dist = min_dist, metric = metric_i,
-          feats = feats, xdim = xdim_i, ydim = ydim_i, rlen = rlen_i,
-          k = fs_res$k_used %||% k_i, scale = isTRUE(input$scale)
-        ))
-        if (!identical(fs_res$k_used %||% k_i, k_i)) {
-          showNotification(
-            sprintf("k was adjusted to %d to fit SOM grid size (%d x %d).", fs_res$k_used, xdim_i, ydim_i),
-            type = "warning", duration = 6
-          )
-        }
-        if (identical(fs_res$meta_method %||% "consensus", "kmeans_fallback")) {
-          showNotification(
-            "Consensus clustering failed on this dataset; used k-means fallback for meta-clustering.",
-            type = "warning", duration = 7
-          )
-        }
-        if (identical(fs_res$meta_method %||% "", "direct_kmeans_fallback")) {
-          showNotification(
-            "FlowSOM core run failed on this dataset; used direct k-means fallback to keep results available.",
-            type = "warning", duration = 8
-          )
-        }
-        try(overlay_hide_when_output_ready(ns("plot"), timeout_ms = 120000L), silent = TRUE)
+        params <- list(seed = seed_i, neighbors = n_neighbors, min_dist = min_dist, metric = metric_i, feats = sel_channels, xdim = xdim_i, ydim = ydim_i, rlen = rlen_i, k = fs_res$k_used %||% k_i, scale = isTRUE(input$scale))
+        shared$analysis$add_run(name = run_name, method = "UMAP + FlowSOM", result = list(df = out), params = params)
       })
     })
 
+    observeEvent(input$import_run, {
+      obj <- active_object()
+      req(obj, input$flowsom_file)
+      run_name <- trimws(input$import_run_name %||% "")
+      if (!nzchar(run_name)) {
+        showNotification("Run name is required.", type = "warning")
+        return()
+      }
+      if (isTRUE(run_name_exists(obj, run_name))) {
+        showNotification("Run name must be unique within this object.", type = "warning")
+        return()
+      }
+      fs_df <- read.csv(input$flowsom_file$datapath, check.names = FALSE)
+      if (nrow(fs_df) != nrow(obj$data)) {
+        showNotification(sprintf("Row mismatch: object=%d vs FlowSOM CSV=%d", nrow(obj$data), nrow(fs_df)), type = "error", duration = 10)
+        return()
+      }
+      cluster_col <- colnames(fs_df)[grepl("FlowSOM|Cluster", colnames(fs_df), ignore.case = TRUE)][1] %||% colnames(fs_df)[2]
+      req(cluster_col)
+      out <- obj$data
+      out$FlowSOM_Cluster <- as.factor(fs_df[[cluster_col]])
+      shared$analysis$add_run(name = run_name, method = "Imported FlowSOM", result = list(df = out), params = list(cluster_col = cluster_col))
+      showNotification("Imported FlowSOM run.", type = "message")
+    })
+
+    output$color_by_ui <- renderUI({
+      if (!identical(input$view_mode, "3d")) return(NULL)
+      df <- run_df()
+      req(df)
+      cols <- unique(c("FlowSOM_Cluster", names(df)[vapply(df, function(x) length(unique(as.character(x))) > 1 && length(unique(as.character(x))) <= 128, logical(1))]))
+      selectInput(ns("color_by"), "3D color by", choices = cols, selected = "FlowSOM_Cluster")
+    })
+
+    output$axis_ui <- renderUI({
+      df <- run_df()
+      if (is.null(df) || !identical(input$view_mode, "2d")) return(NULL)
+      numeric_cols <- names(df)[vapply(df, is.numeric, logical(1))]
+      if (all(c("UMAP_1", "UMAP_2") %in% numeric_cols)) return(NULL)
+      if (length(numeric_cols) < 2) {
+        return(div(class = "Pinhki-inline-note", tags$b("No numeric axes available. "), "Imported runs need at least two numeric columns for 2D preview."))
+      }
+      fluidRow(
+        column(6, selectInput(ns("x_axis"), "X axis", choices = numeric_cols, selected = numeric_cols[1])),
+        column(6, selectInput(ns("y_axis"), "Y axis", choices = numeric_cols, selected = numeric_cols[2]))
+      )
+    })
+
     build_2d_plot <- reactive({
-      req(shared$umap$df())
-      df <- shared$umap$df()
-      ggplot(df, aes(.data[["UMAP_1"]], .data[["UMAP_2"]], color = .data[["FlowSOM_Cluster"]])) +
+      df <- run_df()
+      req(df, "FlowSOM_Cluster" %in% names(df))
+      x_axis <- if ("UMAP_1" %in% names(df)) "UMAP_1" else input$x_axis
+      y_axis <- if ("UMAP_2" %in% names(df)) "UMAP_2" else input$y_axis
+      req(x_axis, y_axis, x_axis %in% names(df), y_axis %in% names(df))
+      ggplot(df, aes(.data[[x_axis]], .data[[y_axis]], color = .data[["FlowSOM_Cluster"]])) +
         geom_point(size = shared$params$point_size(), alpha = shared$params$point_alpha(), shape = shared$params$point_shape(), stroke = shared$params$point_stroke()) +
         coord_fixed(ratio = 1) +
         theme_minimal(base_size = 11) +
-        theme(
-          plot.title = element_text(size = 13, face = "bold"),
-          legend.position = "top",
-          legend.title = element_text(size = 10),
-          legend.text = element_text(size = 9)
-        ) +
-        guides(color = guide_legend(override.aes = list(size = 3, alpha = 1), ncol = 6)) +
-        labs(x = "UMAP 1", y = "UMAP 2", color = "FlowSOM meta-cluster", title = "UMAP colored by FlowSOM clusters")
+        theme(legend.position = "top") +
+        labs(x = x_axis, y = y_axis, color = "FlowSOM cluster", title = active_run()$name %||% "Cluster run")
     })
 
     output$plot <- renderPlot({
-      req(input$view_mode)
-      if (!identical(input$view_mode, "2d")) return(invisible(NULL))
+      req(identical(input$view_mode, "2d"))
       build_2d_plot()
     }, res = 120)
 
     output$plot3d <- renderPlotly({
-      req(input$view_mode)
-      if (!identical(input$view_mode, "3d")) return(NULL)
-      req(shared$umap$df())
-      df <- shared$umap$df()
+      req(identical(input$view_mode, "3d"))
+      df <- run_df()
+      req(df, "UMAP_1" %in% names(df), "UMAP_2" %in% names(df), "FlowSOM_Cluster" %in% names(df))
       color_by <- input$color_by %||% "FlowSOM_Cluster"
-      if (!color_by %in% colnames(df)) color_by <- "FlowSOM_Cluster"
-      pal <- scales::hue_pal()(length(unique(df[[color_by]])))
-      names(pal) <- unique(as.character(df[[color_by]]))
-
-      plotly::plot_ly(
-        data = df,
-        x = ~.data[["UMAP_1"]],
-        y = ~.data[["UMAP_2"]],
-        z = ~as.numeric(.data[["FlowSOM_Cluster"]]),
-        color = ~as.factor(.data[[color_by]]),
-        colors = pal,
-        type = "scatter3d",
-        mode = "markers",
-        marker = list(size = 2.2, opacity = 0.78)
-      ) %>%
-        plotly::layout(
-          title = list(text = "UMAP 3D interactive view", font = list(size = 13)),
-          legend = list(orientation = "h", x = 0, y = 1.08),
-          scene = list(
-            xaxis = list(title = "UMAP 1"),
-            yaxis = list(title = "UMAP 2"),
-            zaxis = list(title = "Cluster Index")
-          )
-        ) %>%
+      if (!color_by %in% names(df)) color_by <- "FlowSOM_Cluster"
+      plotly::plot_ly(data = df, x = ~.data[["UMAP_1"]], y = ~.data[["UMAP_2"]], z = ~as.numeric(.data[["FlowSOM_Cluster"]]), color = ~as.factor(.data[[color_by]]), type = "scatter3d", mode = "markers", marker = list(size = 2.2, opacity = 0.78)) %>%
+        plotly::layout(scene = list(xaxis = list(title = "UMAP 1"), yaxis = list(title = "UMAP 2"), zaxis = list(title = "Cluster Index"))) %>%
         plotly::config(displaylogo = FALSE)
     })
 
     output$export_ui <- renderUI({
-      req(input$view_mode)
-      if (identical(input$view_mode, "3d")) {
-        return(
-          tagList(
-            p(class = "control-note", "3D export generates an interactive HTML bundle (.zip) with required assets."),
-            textInput(ns("umap3d_export_name"), "3D export filename stem", value = "umap3d_export"),
-            downloadButton(ns("download_umap3d_bundle"), "Download 3D Bundle (.zip)", class = "btn btn-sm")
-          )
-        )
+      if (is.null(active_object())) {
+        return(div(class = "Pinhki-inline-note", tags$b("Nothing to export. "), "Create or import an analysis object first."))
       }
-      tagList(
-        p(class = "control-note", "2D export uses current UMAP styling and fixed 1:1 ratio."),
-        downloadButton(ns("download_umap_pdf"), "Download 2D PDF", class = "btn btn-sm"),
-        tags$span(" "),
-        downloadButton(ns("download_umap_svg"), "Download 2D SVG", class = "btn btn-sm")
-      )
+      downloadButton(ns("download_bundle"), "Download Analysis Bundle", class = "btn btn-primary")
     })
 
-    output$download_umap_pdf <- downloadHandler(
-      filename = function() paste0("UMAP_2D_", Sys.Date(), ".pdf"),
-      content = function(file) {
-        ggsave(file, plot = build_2d_plot(), device = grDevices::cairo_pdf, width = 8, height = 8, dpi = 300)
-      }
+    output$download_bundle <- downloadHandler(
+      filename = function() paste0("analysis_object_", Sys.Date(), ".zip"),
+      content = function(file) shared$analysis$export_bundle(file = file)
     )
-
-    output$download_umap_svg <- downloadHandler(
-      filename = function() paste0("UMAP_2D_", Sys.Date(), ".svg"),
-      content = function(file) {
-        svglite::svglite(file = file, width = 8, height = 8)
-        print(build_2d_plot())
-        grDevices::dev.off()
-      }
-    )
-
-    observeEvent(input$download_umap3d_bundle, {
-      overlay_show("Building 3D UMAP bundle...")
-    }, ignoreInit = TRUE)
-
-    output$download_umap3d_bundle <- downloadHandler(
-      filename = function() paste0(gsub("[^A-Za-z0-9_.-]+", "_", input$umap3d_export_name %||% "umap3d_export"), "_bundle.zip"),
-      content = function(file) {
-        on.exit(overlay_hide(), add = TRUE)
-        req(shared$umap$df())
-        df <- shared$umap$df()
-        color_by <- input$color_by %||% "FlowSOM_Cluster"
-        if (!color_by %in% colnames(df)) color_by <- "FlowSOM_Cluster"
-        pal <- scales::hue_pal()(length(unique(df[[color_by]])))
-        names(pal) <- unique(as.character(df[[color_by]]))
-
-        stem <- gsub("[^A-Za-z0-9_.-]+", "_", input$umap3d_export_name %||% "umap3d_export")
-        widget <- plotly::plot_ly(
-          data = df,
-          x = ~.data[["UMAP_1"]],
-          y = ~.data[["UMAP_2"]],
-          z = ~as.numeric(.data[["FlowSOM_Cluster"]]),
-          color = ~as.factor(.data[[color_by]]),
-          colors = pal,
-          type = "scatter3d",
-          mode = "markers",
-          marker = list(size = 2.2, opacity = 0.78)
-        ) %>%
-          plotly::layout(
-            title = list(text = "UMAP 3D interactive view", font = list(size = 13)),
-            legend = list(orientation = "h", x = 0, y = 1.08),
-            scene = list(
-              xaxis = list(title = "UMAP 1"),
-              yaxis = list(title = "UMAP 2"),
-              zaxis = list(title = "Cluster Index")
-            )
-          ) %>%
-          plotly::config(displaylogo = FALSE)
-
-        out_dir <- tempfile(pattern = "umap3d_bundle_")
-        dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-        html_path <- file.path(out_dir, paste0(stem, ".html"))
-        htmlwidgets::saveWidget(widget, file = html_path, selfcontained = FALSE, title = "UMAP 3D interactive view")
-
-        old_wd <- getwd()
-        on.exit(setwd(old_wd), add = TRUE)
-        setwd(out_dir)
-        bundle_items <- c(basename(html_path), paste0(stem, "_files"))
-        bundle_items <- bundle_items[file.exists(bundle_items)]
-        utils::zip(zipfile = file, files = bundle_items)
-      }
-    )
-    
-    observeEvent(input$send, {
-      req(shared$umap$df())
-      shared$flowsom$df(shared$umap$df())
-      shared$flowsom$order(sort(as.numeric(levels(shared$umap$df()[["FlowSOM_Cluster"]]))))
-      showNotification("UMAP + FlowSOM sent to FlowSOM page.", type = "message")
-    })
   })
 }

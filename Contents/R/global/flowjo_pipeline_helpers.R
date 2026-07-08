@@ -73,19 +73,199 @@ flowjo_build_concat_object <- function(selected_df, marker_cols, assay_name = "e
   sce
 }
 
-flowjo_cluster_concat <- function(concat_df, marker_cols, seed = 42L, k = 20L) {
+flowjo_gate_path <- function(gates, gate_id) {
+  parts <- character()
+  seen <- character()
+  cur <- gate_id
+  while (!is.null(cur) && !identical(cur, "root") && !is.null(gates[[cur]]) && !(cur %in% seen)) {
+    seen <- c(seen, cur)
+    parts <- c(gates[[cur]]$name %||% cur, parts)
+    cur <- gates[[cur]]$parent_id %||% "root"
+  }
+  paste(c("root", parts), collapse = "/")
+}
+
+flowjo_default_cluster_markers <- function(marker_cols) {
+  preferred <- c(
+    "CD45RA", "CD11a", "CD49d", "CCR4", "KLRG1", "CCR6", "CXCR3", "PD1",
+    "CD127", "CD25", "CD28", "CCR7", "CD45RO", "HLA-DR", "CD95", "CD226",
+    "CXCR5", "CD27", "CD38"
+  )
+  hit <- marker_cols[toupper(marker_cols) %in% toupper(preferred)]
+  if (length(hit) >= 2) return(hit)
+  drop <- grepl("^(TIME|FSC|SSC)|LIVE|DEAD|TETRAMER|CD19|CD14|^CD3$|^CD4$|^CD8$", marker_cols, ignore.case = TRUE)
+  fallback <- marker_cols[!drop]
+  if (length(fallback) >= 2) fallback else marker_cols
+}
+
+flowjo_population_concat <- function(registry, gates, memberships, items, mode = "cap", cap = 5000L) {
+  items <- items[vapply(items, function(x) isTRUE(x$include), logical(1))]
+  if (!length(items)) stop("Population basket is empty.")
+  rows <- list()
+  map <- list()
+  set_ids <- stats::setNames(seq_along(unique(vapply(items, function(x) x$set_name %||% "Population Set", character(1)))),
+                             unique(vapply(items, function(x) x$set_name %||% "Population Set", character(1))))
+
+  for (i in seq_along(items)) {
+    it <- items[[i]]
+    e <- registry[[it$sample_id]]
+    gate <- gates[[it$gate_id]]
+    keep <- memberships[[it$sample_id]][[it$gate_id]]
+    if (is.null(e) || is.null(gate) || is.null(keep) || !any(keep, na.rm = TRUE)) next
+    idx <- which(keep)
+    if (identical(mode, "cap")) {
+      n <- min(length(idx), as.integer(cap %||% 5000L))
+      if (n < length(idx)) idx <- sample(idx, n)
+    }
+    dat <- e$df[idx, , drop = FALSE]
+    dat$event_id <- idx
+    dat$sample_id <- it$sample_id
+    dat$sample_name <- e$name %||% it$sample_id
+    dat$gate_id <- it$gate_id
+    dat$gate_name <- gate$name %||% it$gate_id
+    dat$gate_path <- flowjo_gate_path(gates, it$gate_id)
+    dat$population_label <- it$label %||% dat$gate_name[[1]]
+    dat$population_set <- it$set_name %||% "Population Set"
+    dat$PopulationID <- i
+    dat$SampleID <- match(it$sample_id, names(registry))
+    dat$GateID <- match(it$gate_id, names(gates))
+    dat$PopulationSetID <- unname(set_ids[[dat$population_set[[1]]]])
+    dat$Volume_uL <- suppressWarnings(as.numeric(it$volume_uL %||% NA_real_))
+    rows[[length(rows) + 1L]] <- dat
+    map[[length(map) + 1L]] <- data.frame(
+      PopulationID = i,
+      PopulationSetID = dat$PopulationSetID[[1]],
+      SampleID = dat$SampleID[[1]],
+      GateID = dat$GateID[[1]],
+      population_set = dat$population_set[[1]],
+      population_label = dat$population_label[[1]],
+      sample_id = it$sample_id,
+      sample_name = dat$sample_name[[1]],
+      gate_id = it$gate_id,
+      gate_name = dat$gate_name[[1]],
+      gate_path = dat$gate_path[[1]],
+      volume_uL = dat$Volume_uL[[1]],
+      events = nrow(dat),
+      sync_status = if (!is.null(gate$sync_group_id)) "synced" else if (!is.null(gate$applied_sample_id)) "sample" else "global",
+      stringsAsFactors = FALSE
+    )
+  }
+  if (!length(rows)) stop("No included basket populations have events.")
+  out <- data.table::rbindlist(rows, use.names = TRUE, fill = TRUE)
+  marker_cols <- setdiff(names(registry[[out$sample_id[[1]]]]$df), character())
+  list(data = as.data.frame(out), markers = intersect(marker_cols, names(out)), mapping = do.call(rbind, map))
+}
+
+flowjo_export_population_fcs_zip <- function(concat_df, marker_cols, mapping, file) {
+  ann <- intersect(c("SampleID", "GateID", "PopulationID", "PopulationSetID", "Volume_uL"), names(concat_df))
+  cols <- intersect(c(marker_cols, ann), names(concat_df))
+  mat <- as.matrix(concat_df[, cols, drop = FALSE])
+  storage.mode(mat) <- "double"
+  mat[!is.finite(mat)] <- 0
+  tmp <- tempfile("flowjo_concat_export_")
+  dir.create(tmp, showWarnings = FALSE)
+  fcs_file <- file.path(tmp, "concatenated_populations.fcs")
+  map_file <- file.path(tmp, "population_mapping.csv")
+  flowCore::write.FCS(flowCore::flowFrame(mat), filename = fcs_file)
+  utils::write.csv(mapping, map_file, row.names = FALSE)
+  zip::zipr(file, c(fcs_file, map_file), root = tmp)
+  invisible(file)
+}
+
+flowjo_cluster_summary <- function(data, marker_values, marker_cols, baseline = "all_analysis_cells") {
+  marker_cols <- intersect(marker_cols, names(marker_values))
+  if (!length(marker_cols)) return(data.frame())
+  long <- data |>
+    dplyr::select(dplyr::any_of(c("FlowSOM_Cluster", "population_label", "gate_name")), dplyr::all_of(marker_cols)) |>
+    tidyr::pivot_longer(dplyr::all_of(marker_cols), names_to = "marker", values_to = "value")
+
+  base_cols <- "marker"
+  if (identical(baseline, "within_population")) {
+    base_cols <- c("population_label", "marker")
+  }
+  base <- long |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(base_cols))) |>
+    dplyr::summarise(parent_median = stats::median(value, na.rm = TRUE), .groups = "drop")
+
+  out <- long |>
+    dplyr::group_by(FlowSOM_Cluster, dplyr::across(dplyr::all_of(base_cols))) |>
+    dplyr::summarise(
+      n = dplyr::n(),
+      median = stats::median(value, na.rm = TRUE),
+      iqr = stats::IQR(value, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    dplyr::left_join(base, by = base_cols) |>
+    dplyr::mutate(
+      delta_parent = median - parent_median,
+      pct_parent = dplyr::if_else(is.finite(parent_median) & abs(parent_median) > 1e-8, 100 * delta_parent / abs(parent_median), NA_real_)
+    )
+
+  if (identical(baseline, "within_population")) {
+    out |>
+      dplyr::group_by(FlowSOM_Cluster, marker) |>
+      dplyr::summarise(
+        n = sum(n),
+        median = stats::weighted.mean(median, n, na.rm = TRUE),
+        iqr = stats::weighted.mean(iqr, n, na.rm = TRUE),
+        parent_median = stats::weighted.mean(parent_median, n, na.rm = TRUE),
+        delta_parent = median - parent_median,
+        pct_parent = dplyr::if_else(is.finite(parent_median) & abs(parent_median) > 1e-8, 100 * delta_parent / abs(parent_median), NA_real_),
+        .groups = "drop"
+      )
+  } else {
+    out
+  }
+}
+
+flowjo_cluster_freq <- function(out) {
+  out |>
+    dplyr::count(sample_name, FlowSOM_Cluster, name = "n") |>
+    dplyr::group_by(sample_name) |>
+    dplyr::mutate(freq = n / sum(n)) |>
+    dplyr::ungroup()
+}
+
+flowjo_recluster_concat <- function(cluster_result, k, seed = 42L) {
+  rc <- flowjo_recluster_flowsom(cluster_result$flowsom, k = k, seed = seed)
+  cluster_result$flowsom$cluster <- rc$cluster
+  cluster_result$flowsom$meta <- rc$meta
+  cluster_result$flowsom$k_used <- rc$k_used
+  cluster_result$flowsom$meta_method <- rc$meta_method
+  cluster_result$data$FlowSOM_Cluster <- factor(rc$cluster)
+  cluster_result$sample_freq <- flowjo_cluster_freq(cluster_result$data)
+  cluster_result$group_freq <- if ("condition" %in% colnames(cluster_result$data)) {
+    cluster_result$data |>
+      dplyr::count(condition, FlowSOM_Cluster, name = "n") |>
+      dplyr::group_by(condition) |>
+      dplyr::mutate(freq = n / sum(n)) |>
+      dplyr::ungroup()
+  } else NULL
+  cluster_result$marker_summary <- flowjo_cluster_summary(cluster_result$data, cluster_result$marker_values, cluster_result$marker_cols)
+  cluster_result$run_signature$k <- as.integer(k)
+  cluster_result
+}
+
+flowjo_cluster_concat <- function(concat_df, marker_cols, seed = 42L, k = 20L, xdim = NULL, ydim = NULL, rlen = 10L) {
   stopifnot(length(marker_cols) >= 2)
   set.seed(as.integer(seed))
-  mat <- as.matrix(concat_df[, marker_cols, drop = FALSE])
+  tf <- flowjo_logicle_transform(concat_df[, marker_cols, drop = FALSE])$data
+  mat <- scale(as.matrix(tf[, marker_cols, drop = FALSE]))
+  mat[!is.finite(mat)] <- 0
+  cluster_df <- concat_df
+  cluster_df[, marker_cols] <- mat
 
+  xdim <- as.integer(xdim %||% max(5L, floor(sqrt(as.integer(k)))))
+  ydim <- as.integer(ydim %||% max(5L, ceiling(sqrt(as.integer(k)))))
+  rlen <- as.integer(rlen %||% 10L)
   fs <- flowsom_cluster(
-    df = concat_df,
+    df = cluster_df,
     features = marker_cols,
-    xdim = max(5L, floor(sqrt(as.integer(k)))),
-    ydim = max(5L, ceiling(sqrt(as.integer(k)))),
-    rlen = 10L,
+    xdim = xdim,
+    ydim = ydim,
+    rlen = rlen,
     seed = as.integer(seed),
-    scale_data = TRUE,
+    scale_data = FALSE,
     k = as.integer(k)
   )
 
@@ -97,8 +277,10 @@ flowjo_cluster_concat <- function(concat_df, marker_cols, seed = 42L, k = 20L) {
     }, error = function(e) NULL)
   }
 
-  um <- uwot::umap(mat, n_neighbors = 15, min_dist = 0.3, metric = "euclidean", verbose = FALSE)
-  colnames(um) <- c("UMAP_1", "UMAP_2")
+  umap_settings <- list(n_neighbors = 15L, min_dist = 0.3, metric = "euclidean", n_components = 3L)
+  um <- uwot::umap(mat, n_neighbors = umap_settings$n_neighbors, min_dist = umap_settings$min_dist,
+                   metric = umap_settings$metric, n_components = umap_settings$n_components, verbose = FALSE)
+  colnames(um) <- c("UMAP_1", "UMAP_2", "UMAP_3")
 
   out <- concat_df
   out$FlowSOM_Cluster <- factor(fs$cluster)
@@ -107,12 +289,10 @@ flowjo_cluster_concat <- function(concat_df, marker_cols, seed = 42L, k = 20L) {
   }
   out$UMAP_1 <- um[, 1]
   out$UMAP_2 <- um[, 2]
+  out$UMAP_3 <- um[, 3]
+  out[, marker_cols] <- tf[, marker_cols, drop = FALSE]
 
-  freq_sample <- out |>
-    dplyr::count(sample_name, FlowSOM_Cluster, name = "n") |>
-    dplyr::group_by(sample_name) |>
-    dplyr::mutate(freq = n / sum(n)) |>
-    dplyr::ungroup()
+  freq_sample <- flowjo_cluster_freq(out)
 
   freq_group <- NULL
   if ("condition" %in% colnames(out)) {
@@ -123,16 +303,29 @@ flowjo_cluster_concat <- function(concat_df, marker_cols, seed = 42L, k = 20L) {
       dplyr::ungroup()
   }
 
-  marker_summary <- out |>
-    dplyr::group_by(FlowSOM_Cluster) |>
-    dplyr::summarise(dplyr::across(dplyr::all_of(marker_cols), ~ mean(.x, na.rm = TRUE)), .groups = "drop")
+  marker_summary <- flowjo_cluster_summary(out, tf, marker_cols)
 
   list(
     data = out,
     flowsom = fs,
+    marker_cols = marker_cols,
+    marker_values = tf,
     sample_freq = freq_sample,
     group_freq = freq_group,
-    marker_summary = marker_summary
+    marker_summary = marker_summary,
+    run_signature = list(
+      marker_cols = marker_cols,
+      seed = as.integer(seed),
+      k = as.integer(k),
+      xdim = xdim,
+      ydim = ydim,
+      rlen = rlen,
+      umap = umap_settings,
+      row_count = nrow(concat_df),
+      columns = names(concat_df),
+      metadata_counts = vapply(intersect(c("sample_name", "sample_id", "gate_name", "gate_path", "population_label", "condition"), names(concat_df)),
+                               function(x) length(unique(concat_df[[x]])), integer(1))
+    )
   )
 }
 
