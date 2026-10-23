@@ -26,7 +26,7 @@ mkdir -p package_libraries python_envs
 
 On macOS, run `bash Launch_mac.sh` from this directory. On Windows, open `Launch_Windows.bat`. The launchers start `Contents/run.R`; do not start `Contents/app.R` directly. The bootstrap installs the core interface packages, and `Contents/global.R` checks the cytometry and plotting dependencies, including flowCore, flowWorkspace, CytoML, FlowSOM and openCyto.
 
-The screenshot above was captured from the running local app on 2026-10-22. A clean installation on another machine and full analysis workflows have not been verified for this publication.
+The screenshot above was captured from the running local app on 2026-10-22, before the GPL license notice was updated. A clean installation on another machine and full analysis workflows have not been verified for this publication.
 
 ## Source layout
 
@@ -41,6 +41,6 @@ This repository preserves the seven original code commits and the subsequent cod
 
 ## License and project status
 
-No open-source license has been granted yet. Existing copyright and permission notices apply. Public visibility alone does not grant permission to reuse or modify this code.
+Original project code is licensed under the [GNU General Public License version 3](LICENSE) (`GPL-3.0-only`). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 This is research software under active development. No external user count, adoption claim, or independent validation is asserted here. Report reproducible problems through GitHub Issues without uploading private sample data.

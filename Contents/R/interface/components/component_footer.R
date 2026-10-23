@@ -13,7 +13,7 @@ wan_lab_footer <- function(APP_VERSION = "0.1.0") {
             span(" • "),
             span(
               class = "footer-policy",
-              HTML("<strong>Unauthorized</strong> LLM-assisted <strong>reverse engineering, modification, or adaptation</strong> of this app is strictly <strong>prohibited</strong>. Ask permission and contribute with <strong>etiquette</strong>.")
+              HTML("Original code is licensed under GNU GPL v3. Third-party components retain their own licenses.")
             ),
             span(" • "),
             tags$a(href = "mailto:rongzhen@wustl.edu", "Contact Developer", target = "_blank")
