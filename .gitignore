@@ -23,3 +23,5 @@ local_settings/
 
 # macOS
 .DS_Store
+
+/example-output/

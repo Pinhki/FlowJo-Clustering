@@ -9,7 +9,11 @@ options(repos = c(CRAN = "https://cloud.r-project.org"))
 
 tryCatch({
   # This command gets the path of the currently running script
-  script_path <- dirname(normalizePath(sub("--file=", "", commandArgs(trailingOnly = FALSE)[4])))
+  # Agent note: Rscript flags change argument positions; locate --file explicitly.
+  script_args <- commandArgs(trailingOnly = FALSE)
+  script_file <- sub("^--file=", "", script_args[grepl("^--file=", script_args)])
+  if (length(script_file) != 1L) stop("Start this entrypoint with Rscript.")
+  script_path <- dirname(normalizePath(script_file, mustWork = TRUE))
   # Set the working directory to that path
   setwd(script_path)
   message("--- Working directory successfully set to: ", getwd(), " ---")
@@ -48,7 +52,6 @@ core_ui_packages <- c(
   "scales",
   "cowplot"
   )
-library(here)
 cran_mirror <- "https://cloud.r-project.org"
 message("--- Checking for Core UI Packages ---")
 
@@ -68,6 +71,7 @@ for (pkg in core_ui_packages) {
   }
 }
 
+library(here)
 message("--- Core UI packages are ready. ---")
 message("")
 
