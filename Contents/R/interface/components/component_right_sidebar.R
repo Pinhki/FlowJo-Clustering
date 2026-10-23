@@ -13,7 +13,16 @@ right_sidebar_ui <- function(id) {
         function applyPinned(){
           var pinned = sessionStorage.getItem(KEY) || '';
           sections().forEach(function(section){
-            section.classList.toggle('is-pinned', section.dataset.sidebarSection === pinned);
+            var isPinned = section.dataset.sidebarSection === pinned;
+            section.classList.toggle('is-pinned', isPinned);
+            var btn = section.querySelector('.sidebar-lower-toggle');
+            if (btn) {
+              var label = section.dataset.sidebarLabel || 'section';
+              var action = isPinned ? 'Unpin ' : 'Pin ';
+              btn.setAttribute('aria-pressed', isPinned ? 'true' : 'false');
+              btn.setAttribute('aria-label', action + label);
+              btn.setAttribute('title', action + label);
+            }
           });
         }
         function updateFade(el){
@@ -26,6 +35,22 @@ right_sidebar_ui <- function(id) {
         function updateAllFades(){
           document.querySelectorAll('.sidebar-data-scroll.Pinhki-scroll-fade, .sidebar-lower-section .sidebar-group-scroll, .sidebar-lower-section .sidebar-pop-scroll').forEach(updateFade);
         }
+        var fadeUpdateScheduled = false;
+        function scheduleFadeUpdates(){
+          if (fadeUpdateScheduled) return;
+          fadeUpdateScheduled = true;
+          updateAllFades();
+          [40, 120, 240, 360].forEach(function(ms){ setTimeout(updateAllFades, ms); });
+          requestAnimationFrame(updateAllFades);
+          setTimeout(function(){ fadeUpdateScheduled = false; }, 380);
+        }
+        function observeFadeContainers(){
+          if (!window.ResizeObserver || window.__flowjoRightSidebarFadeResizeObserver) return;
+          window.__flowjoRightSidebarFadeResizeObserver = new ResizeObserver(scheduleFadeUpdates);
+          document.querySelectorAll('.sidebar-lower-section, .sidebar-lower-section .sidebar-group-scroll, .sidebar-lower-section .sidebar-pop-scroll').forEach(function(el){
+            window.__flowjoRightSidebarFadeResizeObserver.observe(el);
+          });
+        }
         document.addEventListener('click', function(e){
           var btn = e.target.closest('.sidebar-lower-toggle');
           if (!btn) return;
@@ -36,7 +61,7 @@ right_sidebar_ui <- function(id) {
           var name = section.dataset.sidebarSection || '';
           sessionStorage.setItem(KEY, sessionStorage.getItem(KEY) === name ? '' : name);
           applyPinned();
-          updateAllFades();
+          scheduleFadeUpdates();
         });
         document.addEventListener('scroll', function(e){
           if (e.target && e.target.matches && e.target.matches('.sidebar-data-scroll.Pinhki-scroll-fade, .sidebar-lower-section .sidebar-group-scroll, .sidebar-lower-section .sidebar-pop-scroll')) updateFade(e.target);
@@ -44,16 +69,16 @@ right_sidebar_ui <- function(id) {
         document.addEventListener('dragover', function(e){
           var section = e.target.closest && e.target.closest('.sidebar-lower-section');
           if (section) section.classList.add('is-drag-active');
-          updateAllFades();
+          scheduleFadeUpdates();
         }, true);
         document.addEventListener('mouseover', function(e){
-          if (e.target.closest && e.target.closest('.sidebar-lower-section')) setTimeout(updateAllFades, 170);
+          if (e.target.closest && e.target.closest('.sidebar-lower-section')) scheduleFadeUpdates();
         }, true);
         document.addEventListener('focusin', function(e){
-          if (e.target.closest && e.target.closest('.sidebar-lower-section')) setTimeout(updateAllFades, 170);
+          if (e.target.closest && e.target.closest('.sidebar-lower-section')) scheduleFadeUpdates();
         }, true);
         document.addEventListener('transitionend', function(e){
-          if (e.target && e.target.classList && e.target.classList.contains('sidebar-lower-section')) updateAllFades();
+          if (e.target && e.target.classList && e.target.classList.contains('sidebar-lower-section')) scheduleFadeUpdates();
         }, true);
         document.addEventListener('dragleave', function(e){
           var section = e.target.closest && e.target.closest('.sidebar-lower-section');
@@ -62,11 +87,11 @@ right_sidebar_ui <- function(id) {
         document.addEventListener('drop', function(e){
           var section = e.target.closest && e.target.closest('.sidebar-lower-section');
           if (section) section.classList.remove('is-drag-active');
-          setTimeout(updateAllFades, 0);
+          setTimeout(scheduleFadeUpdates, 0);
         }, true);
-        document.addEventListener('shiny:value', function(){ setTimeout(function(){ applyPinned(); updateAllFades(); }, 0); });
-        window.addEventListener('resize', updateAllFades);
-        setTimeout(function(){ applyPinned(); updateAllFades(); }, 0);
+        document.addEventListener('shiny:value', function(){ setTimeout(function(){ applyPinned(); observeFadeContainers(); scheduleFadeUpdates(); }, 0); });
+        window.addEventListener('resize', scheduleFadeUpdates);
+        setTimeout(function(){ applyPinned(); observeFadeContainers(); scheduleFadeUpdates(); }, 0);
       })();
     "))),
     div(
@@ -95,10 +120,11 @@ right_sidebar_ui <- function(id) {
         div(
           class = "sidebar-section sidebar-lower-section sidebar-group-section Pinhki-scroll-fade",
           `data-sidebar-section` = "groups",
+          `data-sidebar-label` = "Groups",
           div(
             class = "sidebar-lower-header",
             h5("Groups", style = "margin-top: 0; font-size: 0.9rem; color: #666;"),
-            actionButton(ns("toggle_groups"), "", icon = icon("chevron-up"), class = "sidebar-lower-toggle btn btn-link btn-sm", title = "Pin Groups")
+            actionButton(ns("toggle_groups"), "", icon = icon("thumbtack"), class = "sidebar-lower-toggle btn btn-link btn-sm", title = "Pin Groups", `aria-label` = "Pin Groups", `aria-pressed` = "false")
           ),
           div(class = "sidebar-group-scroll", uiOutput(ns("group_cards"))),
           div(
@@ -109,10 +135,11 @@ right_sidebar_ui <- function(id) {
         div(
           class = "sidebar-section sidebar-lower-section sidebar-pop-section Pinhki-scroll-fade",
           `data-sidebar-section` = "basket",
+          `data-sidebar-label` = "Population Basket",
           div(
             class = "sidebar-lower-header",
             h5("Population Basket", style = "margin-top: 0; font-size: 0.9rem; color: #666;"),
-            actionButton(ns("toggle_basket"), "", icon = icon("chevron-up"), class = "sidebar-lower-toggle btn btn-link btn-sm", title = "Pin Population Basket")
+            actionButton(ns("toggle_basket"), "", icon = icon("thumbtack"), class = "sidebar-lower-toggle btn btn-link btn-sm", title = "Pin Population Basket", `aria-label` = "Pin Population Basket", `aria-pressed` = "false")
           ),
           div(
             class = "sidebar-pop-scroll",
@@ -131,7 +158,6 @@ right_sidebar_ui <- function(id) {
           class = "sidebar-bottom-actions",
           div(
             class = "sidebar-button-row",
-            actionButton(ns("open_settings"), "Settings", icon = icon("sliders"), class = "btn btn-sm"),
             actionButton(ns("open_import_export"), "Import / Export", icon = icon("file-export"), class = "btn btn-sm workspace-btn")
           )
         )
@@ -149,11 +175,17 @@ right_sidebar_server <- function(id, shared) {
     selected_population_id <- reactiveVal(NULL)
 
     switch_main_tab <- function(value) {
-      shinyjs::runjs(sprintf("document.querySelector('a[data-value=\"%s\"], button[data-value=\"%s\"]').click();", value, value))
+      app_nav_select(shared$session, value)
     }
 
     observeEvent(input$selected_fcs_id, {
-      selected_fcs_id(as.character(input$selected_fcs_id %||% ""))
+      sid <- as.character(input$selected_fcs_id %||% "")
+      selected_fcs_id(sid)
+      # Agent note: In Gating, clicking a sample must use population-aware switching, not just highlight the card.
+      if (identical(shared$session$input$main_nav, "gating_tab") &&
+          nzchar(sid) && !is.null(shared$fcs$registry()[[sid]])) {
+        shared$ui$request_gating_sample(sid)
+      }
     }, ignoreInit = TRUE)
 
     observeEvent(input$selected_group_id, {
@@ -171,17 +203,20 @@ right_sidebar_server <- function(id, shared) {
       sel
     })
 
+    observe({
+      tbl <- shared$fcs$table()
+      sel <- selected_fcs_id()
+      if (nrow(tbl) == 0 || (!is.null(sel) && nzchar(sel) && sel %in% tbl$id)) return()
+      idx <- which(tbl$is_active)
+      if (length(idx) == 0) idx <- 1
+      selected_fcs_id(tbl$id[[idx[1]]])
+    })
+
     output$fcs_registry_cards <- renderUI({
       tbl <- shared$fcs$table()
+      message("[right-sidebar] render fcs_registry_cards rows=", nrow(tbl))
       if (nrow(tbl) == 0) {
         return(div(class = "sidebar-file-empty", "No FCS files loaded."))
-      }
-      cur_sel <- selected_fcs_id()
-      if (is.null(cur_sel) || !nzchar(cur_sel) || !(cur_sel %in% tbl$id)) {
-        idx <- which(tbl$is_active)
-        if (length(idx) == 0) idx <- 1
-        next_sel <- tbl$id[[idx[1]]]
-        selected_fcs_id(next_sel)
       }
 
       active_sel <- selected_id()
@@ -220,6 +255,7 @@ right_sidebar_server <- function(id, shared) {
 
     output$group_cards <- renderUI({
       groups <- shared$gating$groups()
+      message("[right-sidebar] render group_cards groups=", length(groups))
       if (!length(groups)) return(div(class = "sidebar-file-empty", "No groups created."))
       cur_sel <- selected_group_id()
       tags$div(class = "sidebar-file-list", lapply(groups, function(g) {
@@ -243,6 +279,7 @@ right_sidebar_server <- function(id, shared) {
 
     output$population_basket <- renderUI({
       tbl <- shared$populations$table()
+      message("[right-sidebar] render population_basket rows=", nrow(tbl))
       if (!nrow(tbl)) return(div(class = "sidebar-file-empty", "No gated populations added."))
       sel <- selected_population_id()
       tags$div(class = "sidebar-pop-list", lapply(seq_len(nrow(tbl)), function(i) {
@@ -257,7 +294,6 @@ right_sidebar_server <- function(id, shared) {
         )
       }))
     })
-
     observeEvent(input$edit_population, {
       id <- selected_population_id(); req(id)
       items <- shared$populations$items(); item <- items[[id]]; req(item)
@@ -285,6 +321,7 @@ right_sidebar_server <- function(id, shared) {
 
     observeEvent(input$population_basket_drop, {
       keys <- unique(trimws(unlist(strsplit(input$population_basket_drop$keys %||% "", ",", fixed = TRUE), use.names = FALSE)))
+      message("[workspace-basket] sidebar_drop_keys=", length(keys[nzchar(keys)]))
       added <- 0L
       for (key in keys[nzchar(keys)]) {
         parts <- strsplit(key, "::", fixed = TRUE)[[1]]
@@ -310,6 +347,10 @@ right_sidebar_server <- function(id, shared) {
       for (i in seq_len(nrow(files))) {
         fcs <- flowCore::read.FCS(files$datapath[[i]], transformation = FALSE, truncate_max_range = FALSE)
         df  <- as.data.frame(flowCore::exprs(fcs))
+        fcs_keywords <- tryCatch(flowCore::keyword(fcs), error = function(e) list())
+        if (is.null(fcs_keywords)) fcs_keywords <- list()
+        else if (!is.list(fcs_keywords) && !is.null(names(fcs_keywords))) fcs_keywords <- as.list(fcs_keywords)
+        else if (!is.list(fcs_keywords)) fcs_keywords <- list()
         pd  <- flowCore::pData(flowCore::parameters(fcs))
         raw_names <- ifelse(!is.na(pd$desc) & pd$desc != "", pd$desc, pd$name)
         colnames(df) <- make.unique(raw_names, sep = "_")
@@ -351,6 +392,7 @@ right_sidebar_server <- function(id, shared) {
           spillover = spill,
           channel_map = channel_map,
           channel_ranges = channel_ranges,
+          keywords = fcs_keywords,
           sample_meta = list(
             condition = NA_character_,
             batch = NA_character_,
@@ -440,6 +482,6 @@ right_sidebar_server <- function(id, shared) {
       switch_main_tab("workspace_tab")
     }, ignoreInit = TRUE)
 
-    list(open_settings = reactive(input$open_settings))
+    list()
   })
 }

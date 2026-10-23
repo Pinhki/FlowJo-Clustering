@@ -38,10 +38,95 @@ flowjo_axis_scale_setting <- function(type, w = 1.25, p = 5, n = 0, t = NULL) {
   list(type = "biex", w = w, p = p, n = n, t = t)
 }
 
+# Agent note: FlowJo's WSP biexponential is calibrated in a 0..channelRange
+# display space and is not numerically identical to flowCore's logicle output.
+# Keep the original calibration parameters so imported gates and points use the
+# same display transform FlowJo recorded; manual axis edits still use flowCore.
+flowjo_wsp_biexp_setting <- function(parameters) {
+  if (is.null(parameters) || !is.list(parameters)) return(NULL)
+  get_num <- function(name, fallback = NA_real_) {
+    value <- suppressWarnings(as.numeric(parameters[[name]] %||% fallback))
+    if (length(value)) value[[1]] else fallback
+  }
+  channel_range <- get_num("channelRange")
+  max_value <- get_num("maxValue")
+  pos <- get_num("pos")
+  neg <- get_num("neg", 0)
+  width_basis <- get_num("widthBasis")
+  if (!all(is.finite(c(channel_range, max_value, pos, neg, width_basis))) ||
+      channel_range <= 0 || max_value <= 0 || pos <= 0 || width_basis >= 0) {
+    return(NULL)
+  }
+  list(
+    type = "biex",
+    engine = "flowjo",
+    source = "wsp",
+    # These proxy values keep the existing axis modal readable. The exact
+    # transform path below uses width_basis/channel_range/max_value instead.
+    w = log10(abs(width_basis)) / 2,
+    p = pos,
+    n = neg,
+    t = max_value,
+    channel_range = channel_range,
+    width_basis = width_basis,
+    wsp_parameters = parameters
+  )
+}
+
+flowjo_default_biexp_setting <- function(channel_range = 4096, max_value = 262144,
+                                         pos = 4.5, neg = 0, width_basis = -10) {
+  setting <- flowjo_wsp_biexp_setting(list(
+    channelRange = channel_range,
+    maxValue = max_value,
+    pos = pos,
+    neg = neg,
+    widthBasis = width_basis
+  ))
+  if (!is.null(setting)) setting$source <- "default"
+  setting
+}
+
+flowjo_wsp_transform_column <- function(x, setting, inverse = FALSE) {
+  if (is.null(setting) || !identical(setting$engine %||% NULL, "flowjo")) return(NULL)
+  if (!requireNamespace("flowWorkspace", quietly = TRUE)) return(NULL)
+  channel_range <- suppressWarnings(as.numeric(setting$channel_range %||% 256))
+  max_value <- suppressWarnings(as.numeric(setting$t %||% setting$max_value %||% 262144))
+  pos <- suppressWarnings(as.numeric(setting$p %||% setting$pos %||% 4.5))
+  neg <- suppressWarnings(as.numeric(setting$n %||% setting$neg %||% 0))
+  width_basis <- suppressWarnings(as.numeric(setting$width_basis %||% -10))
+  if (!all(is.finite(c(channel_range, max_value, pos, neg, width_basis))) ||
+      channel_range <= 0 || max_value <= 0 || pos <= 0 || width_basis >= 0) {
+    return(NULL)
+  }
+  transform <- tryCatch(
+    flowWorkspace::flowjo_biexp(
+      channelRange = channel_range,
+      maxValue = max_value,
+      pos = pos,
+      neg = neg,
+      widthBasis = width_basis,
+      inverse = isTRUE(inverse)
+    ),
+    error = function(e) NULL
+  )
+  if (is.null(transform)) return(NULL)
+  tryCatch(transform(x), error = function(e) NULL)
+}
+
 flowjo_transform_column <- function(x, setting) {
   if (is.null(setting) || is.null(setting$type)) return(x)
   if (identical(setting$type, "log1p")) return(suppressWarnings(log1p(x)))
+  if (identical(setting$type, "linear")) {
+    gain <- suppressWarnings(as.numeric(setting$gain %||% 1))
+    min_range <- suppressWarnings(as.numeric(setting$min_range %||% 0))
+    if (all(is.finite(c(gain, min_range))) && gain != 0) return((x - min_range) * gain)
+    return(x)
+  }
   if (!identical(setting$type, "biex")) return(x)
+  if (identical(setting$engine %||% NULL, "flowjo")) {
+    out <- flowjo_wsp_transform_column(x, setting, inverse = FALSE)
+    if (!is.null(out)) return(out)
+  }
   if (is.null(setting$w) || is.null(setting$p) || is.null(setting$n)) return(x)
   if ((2 * setting$w + setting$n) >= setting$p) return(x)
 
@@ -52,7 +137,17 @@ flowjo_transform_column <- function(x, setting) {
 flowjo_inverse_transform_column <- function(x, setting) {
   if (is.null(setting) || is.null(setting$type)) return(x)
   if (identical(setting$type, "log1p")) return(suppressWarnings(expm1(x)))
+  if (identical(setting$type, "linear")) {
+    gain <- suppressWarnings(as.numeric(setting$gain %||% 1))
+    min_range <- suppressWarnings(as.numeric(setting$min_range %||% 0))
+    if (all(is.finite(c(gain, min_range))) && gain != 0) return(x / gain + min_range)
+    return(x)
+  }
   if (!identical(setting$type, "biex")) return(x)
+  if (identical(setting$engine %||% NULL, "flowjo")) {
+    out <- flowjo_wsp_transform_column(x, setting, inverse = TRUE)
+    if (!is.null(out)) return(out)
+  }
   if (is.null(setting$w) || is.null(setting$p) || is.null(setting$n)) return(x)
   if ((2 * setting$w + setting$n) >= setting$p) return(x)
 
@@ -99,7 +194,13 @@ flowjo_axis_labeler <- function(setting = NULL) {
     vals <- breaks
     if (!is.null(setting) && identical(setting$type, "log1p")) {
       vals <- expm1(breaks)
+    } else if (!is.null(setting) && identical(setting$type, "linear")) {
+      vals <- flowjo_inverse_transform_column(breaks, setting)
     } else if (!is.null(setting) && identical(setting$type, "biex")) {
+      if (identical(setting$engine %||% NULL, "flowjo")) {
+        exact <- flowjo_inverse_transform_column(breaks, setting)
+        if (!is.null(exact)) return(flowjo_mfi_labels(exact))
+      }
         tf <- tryCatch(flowCore::logicleTransform(w = setting$w, t = setting$t %||% 262144, m = setting$p, a = setting$n), error = function(e) NULL)
       if (!is.null(tf)) {
         inv <- flowCore::inverseLogicleTransform(trans = tf)

@@ -57,6 +57,10 @@ flowjo_gate_applicability <- function(entry, gate, gates = list()) {
   if (!is.null(gate$applied_sample_id) && !identical(entry$id, gate$applied_sample_id)) {
     return(list(ok = FALSE, status = "not_applied"))
   }
+  # Agent note: WSP paths are a union of sample trees; absent geometry means this population does not exist in this sample.
+  if (!is.null(gate$wsp_geometry_by_sample) && is.null(gate$wsp_geometry_by_sample[[entry$id]])) {
+    return(list(ok = FALSE, status = "not_applied"))
+  }
   cm <- entry$channel_map
   cols <- colnames(entry$df)
   x_col <- flowjo_channel_to_marker(cm, gate$x_channel)

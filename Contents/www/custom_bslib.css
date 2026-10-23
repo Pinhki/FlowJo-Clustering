@@ -16,10 +16,18 @@
   --Pinhki-expand-duration: 320ms;
   --Pinhki-expand-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --Pinhki-scroll-fade-duration: 180ms;
+  --Pinhki-mac-window-radius: 17px;
+  --Pinhki-notification-edge-gap: 4px;
+  --Pinhki-mac-notification-corner: var(--Pinhki-mac-window-radius);
   --wan-concentric-step: 3px;
   --wan-radius-sm-inner: clamp(0px, calc(var(--wan-radius-sm) - var(--wan-concentric-step)), 999px);
   --wan-radius-md-inner: clamp(0px, calc(var(--wan-radius-md) - var(--wan-concentric-step)), 999px);
   --wan-radius-lg-inner: clamp(0px, calc(var(--wan-radius-lg) - var(--wan-concentric-step)), 999px);
+}
+
+.Pinhki-platform-mac #shiny-notification-panel .shiny-notification {
+  /* Agent note: macOS Shiny notifications follow the shared superellipse corner contract; keep all four corners tied to the shared mac window radius. */
+  border-radius: var(--Pinhki-mac-notification-corner) !important;
 }
 
 /* Apply a unified smooth corner aesthetic across the app */
@@ -91,9 +99,16 @@
    Default path is classic border-radius for predictable borders/shadows.
    Apply continuous superellipse corners anywhere the app already uses rounded rectangles. */
 @supports (corner-shape: superellipse(1.414)) {
+  .Pinhki-platform-mac #shiny-notification-panel .shiny-notification,
+  button,
   .wan-squircle,
   .card,
   .btn,
+  .action-button,
+  .dropdown-toggle,
+  .nav-link,
+  .input-group .btn,
+  .input-group-btn .btn,
   .form-control,
   .form-select,
   .selectize-control .selectize-input,
@@ -469,9 +484,19 @@ body:not(.app-dark-mode) .app-page .important_card_style {
 .right-sidebar-stack {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  /* Agent note: Use remaining sidebar space; 100% leaves no room for sibling bottom actions or content padding. */
+  flex: 1 1 0;
+  height: auto;
   min-height: 0;
-  margin-top: 18px;
+  margin-top: 0;
+}
+/* Agent note: Reserve the collapse control's row so it cannot overlap the FCS heading. */
+.right-sidebar-stack .sidebar-data-section > h5 {
+  min-height: var(--_icon-button-size, 2rem);
+  padding-left: calc(var(--_icon-button-size, 2rem) + 8px);
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
 }
 .sidebar-data-section {
   flex: 1 1 auto;
@@ -499,11 +524,9 @@ body:not(.app-dark-mode) .app-page .important_card_style {
   position: relative;
   flex: 0 0 auto;
   min-height: 0;
-  height: 96px;
   overflow: hidden;
   max-height: 96px;
-  transition: height var(--Pinhki-expand-duration) var(--Pinhki-expand-ease),
-    max-height var(--Pinhki-expand-duration) var(--Pinhki-expand-ease);
+  transition: max-height var(--Pinhki-expand-duration) var(--Pinhki-expand-ease);
 }
 .sidebar-lower-section.Pinhki-scroll-fade {
   -webkit-mask-image: none;
@@ -537,13 +560,11 @@ body:not(.app-dark-mode) .app-page .important_card_style {
 .sidebar-lower-section:focus-within,
 .sidebar-lower-section.is-pinned,
 .sidebar-lower-section.is-drag-active {
-  height: 40vh;
-  max-height: 40vh;
+  max-height: min(72vh, calc(100dvh - 220px));
 }
 .sidebar-lower-stack:has(.sidebar-lower-section:hover) .sidebar-lower-section.is-pinned:not(:hover):not(:focus-within):not(.is-drag-active),
 .sidebar-lower-stack:has(.sidebar-lower-section:focus-within) .sidebar-lower-section.is-pinned:not(:hover):not(:focus-within):not(.is-drag-active),
 .sidebar-lower-stack:has(.sidebar-lower-section.is-drag-active) .sidebar-lower-section.is-pinned:not(:hover):not(:focus-within):not(.is-drag-active) {
-  height: 96px;
   max-height: 96px;
 }
 .sidebar-lower-header {
@@ -590,10 +611,15 @@ body:not(.app-dark-mode) .app-page .important_card_style {
 .sidebar-lower-toggle.btn .svg-inline--fa {
   display: block;
   line-height: 1;
+  transform: rotate(-20deg);
+  transition: transform var(--Pinhki-expand-duration) var(--Pinhki-expand-ease);
 }
-.sidebar-lower-section.is-pinned .sidebar-lower-toggle.btn {
+.sidebar-lower-toggle.btn[aria-pressed="true"] {
   color: #111827;
-  transform: rotate(180deg);
+}
+.sidebar-lower-toggle.btn[aria-pressed="true"] i,
+.sidebar-lower-toggle.btn[aria-pressed="true"] .svg-inline--fa {
+  transform: rotate(0deg);
 }
 .sidebar-group-scroll,
 .sidebar-pop-scroll {
@@ -613,7 +639,7 @@ body:not(.app-dark-mode) .app-page .important_card_style {
 .sidebar-lower-section:focus-within .sidebar-pop-scroll,
 .sidebar-lower-section.is-pinned .sidebar-pop-scroll,
 .sidebar-lower-section.is-drag-active .sidebar-pop-scroll {
-  max-height: calc(40vh - 68px);
+  max-height: min(58vh, calc(100dvh - 288px));
 }
 .sidebar-lower-stack:has(.sidebar-lower-section:hover) .sidebar-lower-section.is-pinned:not(:hover):not(:focus-within):not(.is-drag-active) .sidebar-group-scroll,
 .sidebar-lower-stack:has(.sidebar-lower-section:focus-within) .sidebar-lower-section.is-pinned:not(:hover):not(:focus-within):not(.is-drag-active) .sidebar-group-scroll,
@@ -1640,4 +1666,23 @@ body.app-dark-mode .channel-picker-title {
 
 body.app-dark-mode .app-page .card-page-card .control-label {
   color: #b6bdc8;
+}
+
+/* Agent note: Heading and collapse button share an 8px top inset; bslib's
+   reserved icon padding would otherwise push the heading onto a second row. */
+.bslib-sidebar-layout.sidebar-right > .sidebar > .sidebar-content:has(.right-sidebar-stack) {
+  padding-top: 8px !important;
+}
+
+/* Agent note: Reserve lower controls before allocating file-list height; nested flex shrink otherwise overflows the footer boundary. */
+.bslib-sidebar-layout.sidebar-right .right-sidebar-stack {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+.bslib-sidebar-layout.sidebar-right .sidebar-lower-stack {
+  margin-top: 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
 }

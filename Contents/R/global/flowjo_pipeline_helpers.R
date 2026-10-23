@@ -51,6 +51,8 @@ flowjo_preprocess_entry <- function(entry, mode = "exact") {
     compensated = as.data.frame(comp),
     transformed = tf$data,
     transform_model = tf$transform,
+    compensation_id = entry$compensation_id %||% NULL,
+    compensation_name = entry$compensation_name %||% NULL,
     channel_map = entry$channel_map %||% data.frame(channel = colnames(raw), marker = colnames(raw), stringsAsFactors = FALSE),
     sample_meta = entry$sample_meta %||% list()
   )
@@ -124,7 +126,9 @@ flowjo_population_concat <- function(registry, gates, memberships, items, mode =
     dat$gate_id <- it$gate_id
     dat$gate_name <- gate$name %||% it$gate_id
     dat$gate_path <- flowjo_gate_path(gates, it$gate_id)
-    dat$population_label <- it$label %||% dat$gate_name[[1]]
+    basket_label <- it$label %||% dat$gate_name[[1]]
+    if (identical(basket_label, gate$name %||% it$gate_id)) basket_label <- sub("^.*/", "", basket_label)
+    dat$population_label <- basket_label
     dat$population_set <- it$set_name %||% "Population Set"
     dat$PopulationID <- i
     dat$SampleID <- match(it$sample_id, names(registry))

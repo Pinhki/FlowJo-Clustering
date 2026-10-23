@@ -27,6 +27,7 @@ wan_lab_navbar <- function(id, theme, import_ui, workspace_ui, compensation_ui, 
       tags$link(rel = "stylesheet", type = "text/css", href = "global.css"),
       tags$link(rel = "stylesheet", type = "text/css", href = "navbar.css"),
       tags$link(rel = "stylesheet", type = "text/css", href = "custom_bslib.css"),
+      tags$script(src = "split_resize.js"),
       tags$script(HTML(
         "(function(){
           function bindRail(nav){
@@ -63,11 +64,12 @@ wan_lab_navbar <- function(id, theme, import_ui, workspace_ui, compensation_ui, 
       nav_panel("Import / Export", value = "import_export_tab", app_page(import_export_ui))
     ),
     nav_menu(.nav_title("Analysis / Clustering", "chart-area"),
-      nav_panel("Batch Concatenation", value = "pipeline_tab", plotting_page(pipeline_ui)),
       nav_panel("Cluster", value = "umap_tab", plotting_page(umap_ui)),
-      nav_panel("Feature Plots", value = "feature_tab", plotting_page(feature_ui))
+      nav_panel("Feature Plots", value = "feature_tab", plotting_page(feature_ui)),
+      nav_panel("Population Export", value = "pipeline_tab", app_page(pipeline_ui))
     ),
     .nav_spacer_safe(),
+    nav_item(actionLink("nav_settings", .nav_title("Settings", "sliders"))),
     nav_item(actionLink("nav_dark_mode_toggle", .nav_title("Dark mode", "moon"))),
     nav_item(actionLink("nav_help", .nav_title("Help", "question-circle")))
   )

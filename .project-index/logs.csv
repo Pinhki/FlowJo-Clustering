@@ -1,3 +1,5 @@
 path,size_bytes
+.entire/logs/entire.log,0
+local_settings/debug_trace.log,15971
 run_log.txt,2609
 update log.txt,110

@@ -1,0 +1,7 @@
+# WSP axis-transform metadata — 2026-08-04
+
+- The selected WSP is `/Users/rongzhenyu/Library/CloudStorage/Box-Box/RY Result Box/Flow Data - Cytek/RY_Human_BET 095 7 Tetramers Dual Color 06-17-2026/RY_Human_BET 095 7 Tetramers Dual Color 06-17-2026.wsp`.
+- Its XML contains 494 `transforms:biex` blocks and 69 `transforms:linear` blocks. FSC-A/SSC-A are recorded as linear `minRange=0`, `maxRange=4194304`; marker examples include FlowJo/CytoML `flowJo_biexp` parameters for `Comp-PE-A` (`channelRange=256`, `maxValue=4194304`, `neg=0`, `pos=5.6226599046`, `widthBasis=-1000`) and `Comp-APC-A` (`widthBasis=-250`).
+- `CytoML::flowjo_to_gatingset()` exposes these through `flowWorkspace::gh_get_transformations(gs[[i]], only.function = FALSE)`. The imported fixture reports 9 samples, 118 population paths, and 117 app gates.
+- Current `flowjo_wsp_app_state()` only copies FCS parameter ranges into `entry$channel_ranges`; the WSP import observer does not populate `shared$transforms$settings()`. Gating therefore falls back to generic marker defaults (`w=1.25`, `p=5`, `n=0`) and only uses the FCS range for `t`.
+- Likely cause of the user-visible mismatch: WSP transform metadata is present and successfully parsed by CytoML, but is not carried into the app’s display transform path. A fix must preserve per-sample/channel WSP transforms or use a validated conversion from FlowJo `flowJo_biexp` parameters to the app’s `flowCore::logicleTransform` settings.

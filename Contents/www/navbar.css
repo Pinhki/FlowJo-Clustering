@@ -246,6 +246,9 @@
   .navbar:hover #nav_help,
   .navbar:focus-within #nav_help,
   .navbar.wl-nav-expanded #nav_help,
+  .navbar:hover #nav_settings,
+  .navbar:focus-within #nav_settings,
+  .navbar.wl-nav-expanded #nav_settings,
   .navbar:hover #nav_dark_mode_toggle,
   .navbar:focus-within #nav_dark_mode_toggle,
   .navbar.wl-nav-expanded #nav_dark_mode_toggle {
@@ -264,6 +267,9 @@
   .navbar:hover #nav_help .action-label,
   .navbar:focus-within #nav_help .action-label,
   .navbar.wl-nav-expanded #nav_help .action-label,
+  .navbar:hover #nav_settings .action-label,
+  .navbar:focus-within #nav_settings .action-label,
+  .navbar.wl-nav-expanded #nav_settings .action-label,
   .navbar:hover #nav_dark_mode_toggle .action-label,
   .navbar:focus-within #nav_dark_mode_toggle .action-label,
   .navbar.wl-nav-expanded #nav_dark_mode_toggle .action-label {
@@ -281,6 +287,9 @@
   .navbar:hover #nav_help .wl-nav-icon,
   .navbar:focus-within #nav_help .wl-nav-icon,
   .navbar.wl-nav-expanded #nav_help .wl-nav-icon,
+  .navbar:hover #nav_settings .wl-nav-icon,
+  .navbar:focus-within #nav_settings .wl-nav-icon,
+  .navbar.wl-nav-expanded #nav_settings .wl-nav-icon,
   .navbar:hover #nav_dark_mode_toggle .wl-nav-icon,
   .navbar:focus-within #nav_dark_mode_toggle .wl-nav-icon,
   .navbar.wl-nav-expanded #nav_dark_mode_toggle .wl-nav-icon {
@@ -291,6 +300,9 @@
   .navbar:hover #nav_help .wl-nav-label,
   .navbar:focus-within #nav_help .wl-nav-label,
   .navbar.wl-nav-expanded #nav_help .wl-nav-label,
+  .navbar:hover #nav_settings .wl-nav-label,
+  .navbar:focus-within #nav_settings .wl-nav-label,
+  .navbar.wl-nav-expanded #nav_settings .wl-nav-label,
   .navbar:hover #nav_dark_mode_toggle .wl-nav-label,
   .navbar:focus-within #nav_dark_mode_toggle .wl-nav-label,
   .navbar.wl-nav-expanded #nav_dark_mode_toggle .wl-nav-label {

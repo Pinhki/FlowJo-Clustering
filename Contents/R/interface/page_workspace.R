@@ -1,18 +1,66 @@
 workspace_page_ui <- function(id) {
   ns <- NS(id)
+  drop_action <- function(button, input_id) div(class = "workspace-toolbar-drop",
+    ondragover = "event.preventDefault();this.classList.add('drop-target');",
+    ondragleave = "if(!this.contains(event.relatedTarget))this.classList.remove('drop-target');",
+    ondrop = sprintf("event.preventDefault();event.stopPropagation();this.classList.remove('drop-target');Shiny.setInputValue('%s',{keys:event.dataTransfer.getData('application/x-flowjo-workspace-rows'),nonce:Math.random()},{priority:'event'});", ns(input_id)), button)
   div(class = "card-page-wrap",
+    singleton(tags$script(HTML(sprintf("
+      (function(){
+        var inputId = '%s';
+        if (window.Shiny && !window.__flowjoWorkspaceSelectionHandler) {
+          window.__flowjoWorkspaceSelectionHandler = true;
+          Shiny.addCustomMessageHandler('flowjo-workspace-selection', function(msg){
+            var keys = (msg && msg.keys) || [];
+            window.flowjoWorkspaceSelectedKeys = keys.slice();
+            document.querySelectorAll('.workspace-tree .workspace-select-row').forEach(function(row){
+              row.classList.toggle('selected', keys.indexOf(row.dataset.rowKey) >= 0);
+            });
+            console.debug('[workspace-basket] equivalentSelection keys='+keys.length);
+          });
+        }
+        window.__flowjoWorkspaceDblClickBound = window.__flowjoWorkspaceDblClickBound || {};
+        if (window.__flowjoWorkspaceDblClickBound[inputId]) return;
+        window.__flowjoWorkspaceDblClickBound[inputId] = true;
+        document.addEventListener('dblclick', function(event){
+          var row = event.target && event.target.closest && event.target.closest('.workspace-tree .gate-nav-gate[data-sample-id][data-gate-id]');
+          if (!row || row.dataset.sampleId === 'group') return;
+          event.preventDefault();
+          event.stopPropagation();
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+          Shiny.setInputValue('%s', {
+            sample: row.dataset.sampleId,
+            gate: row.dataset.gateId,
+            nonce: Math.random()
+          }, {priority: 'event'});
+        }, true);
+      })();
+    ", ns("open_workspace_gate"), ns("open_workspace_gate"))))),
     card_page_header("Workspace", subtitle = "Samples, groups, gates, and group application."),
-    div(class = "workspace-flowjo",
-      card_page_card("Workspace Tree",
-        div(class = "d-flex gap-2 mb-2",
-          actionButton(ns("new_group"), "New Group", class = "btn btn-primary btn-sm"),
-          actionButton(ns("add_selected_basket"), "Add to Basket", class = "btn btn-outline-secondary btn-sm"),
+    shiny_split_resize(
+      id = ns("workspace_split"),
+      class = "workspace-flowjo Pinhki-split-responsive-vertical Pinhki-resize-color-hover",
+      default_left = "50%",
+      min_left = 320,
+      min_right = 360,
+      default_top = "60%",
+      min_top = 240,
+      min_bottom = 240,
+      left = card_page_card("Workspace Tree",
+        content_class = "Pinhki-scroll-fade",
+        div(class = "workspace-selection-toolbar d-flex gap-2 mb-2 flex-wrap",
+            drop_action(actionButton(ns("new_group"), "New Group", class = "btn btn-primary btn-sm"), "workspace_new_group_drop"),
+            actionButton(ns("select_equivalent_gates"), "Select equivalent gates", class = "btn btn-outline-secondary btn-sm"),
+            drop_action(actionButton(ns("add_selected_basket"), "Add to Basket", class = "btn btn-outline-secondary btn-sm"), "workspace_basket_drop"),
           actionButton(ns("open_gating"), "Open Gating", class = "btn btn-outline-secondary btn-sm")
         ),
         uiOutput(ns("workspace_tree"))
       ),
-      card_page_card("Details",
-        uiOutput(ns("workspace_details"))
+      right = card_page_card("Details",
+        content_class = "Pinhki-scroll-fade",
+        div(class = "workspace-details-scroll Pinhki-scroll-fade",
+          uiOutput(ns("workspace_details"))
+        )
       )
     )
   )
@@ -139,13 +187,13 @@ workspace_page_server <- function(id, shared) {
     }
 
     # Agent note: Workspace selection is row-scoped because the same gate id can appear under multiple samples/groups.
-    workspace_row_key <- function(type, sample_id = "", gate_id = "") {
-      paste(type, sample_id %||% "", gate_id %||% "", sep = "::")
+    workspace_row_key <- function(type, sample_id = "", gate_id = "", group_id = "") {
+      paste(type, sample_id %||% "", gate_id %||% "", group_id %||% "", sep = "::")
     }
 
     workspace_row_select_js <- function(ns_id, type, key, id = "", sample = "", gate = "") {
       sprintf(
-        "var root=this.closest('.workspace-tree')||this.closest('.workspace-group-gate-tree')||document,rows=Array.from(root.querySelectorAll('.workspace-select-row')),key='%s'; window.flowjoWorkspaceLastRowKey=window.flowjoWorkspaceLastRowKey||null; if(event.shiftKey&&window.flowjoWorkspaceLastRowKey){var a=rows.findIndex(function(r){return r.dataset.rowKey===window.flowjoWorkspaceLastRowKey;}),b=rows.indexOf(this); if(a>-1&&b>-1) rows.slice(Math.min(a,b),Math.max(a,b)+1).forEach(function(r){r.classList.add('selected');});} else if(event.metaKey||event.ctrlKey){this.classList.toggle('selected'); window.flowjoWorkspaceLastRowKey=key;} else {rows.forEach(function(r){r.classList.remove('selected');}); this.classList.add('selected'); window.flowjoWorkspaceLastRowKey=key;} Shiny.setInputValue('%s',{type:'%s',id:'%s',sample:'%s',gate:'%s',keys:Array.from(root.querySelectorAll('.workspace-select-row.selected')).map(function(r){return r.dataset.rowKey;}),nonce:Math.random()},{priority:'event'}); event.preventDefault(); event.stopPropagation();",
+        "var root=this.closest('.workspace-tree')||this.closest('.workspace-group-gate-tree')||document,rows=Array.from(root.querySelectorAll('.workspace-select-row')),key='%s'; window.flowjoWorkspaceLastRowKey=window.flowjoWorkspaceLastRowKey||null; if(event.shiftKey&&window.flowjoWorkspaceLastRowKey){var a=rows.findIndex(function(r){return r.dataset.rowKey===window.flowjoWorkspaceLastRowKey;}),b=rows.indexOf(this); if(a>-1&&b>-1) rows.slice(Math.min(a,b),Math.max(a,b)+1).forEach(function(r){r.classList.add('selected');});} else if(event.metaKey||event.ctrlKey){this.classList.toggle('selected'); window.flowjoWorkspaceLastRowKey=key;} else {rows.forEach(function(r){r.classList.remove('selected');}); this.classList.add('selected'); window.flowjoWorkspaceLastRowKey=key;} window.flowjoWorkspaceSelectedKeys=Array.from(root.querySelectorAll('.workspace-select-row.selected')).map(function(r){return r.dataset.rowKey;}); console.debug('[workspace-basket] selection keys='+window.flowjoWorkspaceSelectedKeys.length); Shiny.setInputValue('%s',{type:'%s',id:'%s',sample:'%s',gate:'%s',keys:window.flowjoWorkspaceSelectedKeys,nonce:Math.random()},{priority:'event'}); event.preventDefault(); event.stopPropagation();",
         key, ns_id, type, id, sample, gate
       )
     }
@@ -169,7 +217,128 @@ workspace_page_server <- function(id, shared) {
       unique(vapply(parts, function(x) x[[2]], character(1)))
     }
 
-    workspace_drag_row_keys_js <- "var root=this.closest('.workspace-tree')||this.closest('.workspace-group-gate-tree')||document; var keys=Array.from(root.querySelectorAll('.workspace-select-row.selected')).map(function(x){return x.dataset.rowKey;}); if(keys.indexOf(this.dataset.rowKey)<0) keys=[this.dataset.rowKey]; var gateIds=keys.map(function(k){var p=k.split('::'); return p[0]==='gate'?p[2]:'';}).filter(Boolean); event.dataTransfer.setData('application/x-flowjo-workspace-rows',keys.join(',')); event.dataTransfer.setData('text/plain',gateIds.join(','));"
+    workspace_selected_gate_rows <- function() {
+      parts <- workspace_selected_parts("gate")
+      if (!length(parts)) return(data.frame(sample_id = character(), gate_id = character(), stringsAsFactors = FALSE))
+      out <- do.call(rbind, lapply(parts, function(x) data.frame(sample_id = x[[2]], gate_id = x[[3]], stringsAsFactors = FALSE)))
+      unique(out[nzchar(out$sample_id) & nzchar(out$gate_id), , drop = FALSE])
+    }
+
+    workspace_gate_path <- function(gates, gate_id) {
+      labels <- character()
+      cur <- gate_id
+      seen <- character()
+      while (!is.null(cur) && nzchar(cur) && !identical(cur, "root") && !(cur %in% seen)) {
+        seen <- c(seen, cur)
+        g <- gates[[cur]]
+        if (is.null(g)) break
+        labels <- c(g$name %||% cur, labels)
+        cur <- g$parent_id %||% "root"
+      }
+      if (length(labels)) paste(labels, collapse = " / ") else "Root"
+    }
+
+    workspace_geometry_text <- function(gate) {
+      fmt <- function(x) {
+        if (is.null(x) || !length(x)) return("--")
+        num <- suppressWarnings(as.numeric(x[[1]]))
+        if (is.na(num)) as.character(x[[1]]) else format(round(num, 3), trim = TRUE, scientific = FALSE)
+      }
+      geom <- gate$geometry %||% list()
+      type <- gate$type %||% "gate"
+      summary <- switch(type,
+        rectangle = sprintf("Rectangle: X %s-%s, Y %s-%s", fmt(geom$xmin), fmt(geom$xmax), fmt(geom$ymin), fmt(geom$ymax)),
+        range = sprintf("Range: X %s-%s", fmt(geom$xmin), fmt(geom$xmax)),
+        ellipse = sprintf("Ellipse: X %s-%s, Y %s-%s", fmt(geom$xmin), fmt(geom$xmax), fmt(geom$ymin), fmt(geom$ymax)),
+        polygon = sprintf("Polygon: %s vertices", if (!is.null(geom$vertices)) nrow(geom$vertices) else 0L),
+        quadrant = sprintf("Quadrant: X %s, Y %s, %s", fmt(geom$x), fmt(geom$y), geom$quadrant %||% "upper_right"),
+        curved_quadrant = sprintf("Curved quadrant: X %s, Y %s, %s", fmt(geom$x), fmt(geom$y), geom$quadrant %||% "upper_right"),
+        paste0(type, " geometry")
+      )
+      exact <- paste(capture.output(str(geom, give.attr = FALSE)), collapse = "\n")
+      list(summary = summary, exact = exact)
+    }
+
+    workspace_gate_detail <- function(sample_id, gate_id, reg, groups, gates) {
+      g <- gates[[gate_id]]
+      if (is.null(g)) return(NULL)
+      st <- if (!identical(sample_id, "group")) gate_stat(sample_id, gate_id) else NULL
+      group <- groups[[g$group_id %||% g$sync_group_id %||% ""]]
+      entry <- if (!identical(sample_id, "group")) reg[[sample_id]] else NULL
+      list(
+        sample_id = sample_id,
+        gate_id = gate_id,
+        gate = g,
+        stat = st,
+        group = group,
+        sample_name = if (!is.null(entry)) entry$name %||% sample_id else NULL,
+        state = flowjo_gate_group_state(g),
+        path = workspace_gate_path(gates, gate_id),
+        geometry = workspace_geometry_text(g)
+      )
+    }
+
+    workspace_gate_detail_block <- function(detail, session, group_choices = character(), rich = FALSE) {
+      g <- detail$gate
+      st <- detail$stat
+      state <- detail$state
+      is_group <- identical(detail$sample_id, "group")
+      context <- if (is_group) {
+        paste("Group template", detail$group$name %||% detail$group$id %||% "")
+      } else {
+        paste("Sample", detail$sample_name %||% detail$sample_id)
+      }
+      div(class = paste("workspace-gate-detail-block", if (rich) "is-rich" else ""),
+        div(class = "workspace-gate-detail-head",
+          div(
+            div(class = "workspace-gate-detail-title", g$name %||% detail$gate_id),
+            div(class = "workspace-gate-detail-context", context)
+          ),
+          span(class = paste("gate-state-badge", state), sync_label(g))
+        ),
+        div(class = "workspace-gate-metrics",
+          div(class = "workspace-gate-metric",
+            span(class = "workspace-gate-metric-value", if (!is.null(st)) format(st$cells, big.mark = ",") else "--"),
+            span(class = "workspace-gate-metric-label", "Cells")
+          ),
+          div(class = "workspace-gate-metric",
+            span(class = "workspace-gate-metric-value", if (!is.null(st)) sprintf("%.2f%%", st$percent_parent) else "--"),
+            span(class = "workspace-gate-metric-label", "Parent")
+          )
+        ),
+        div(class = "workspace-gate-facts",
+          div(span("Channels"), strong(sprintf("%s / %s", g$x_channel %||% "--", g$y_channel %||% "--"))),
+          div(span("Type"), strong(g$type %||% "--")),
+          div(span("Path"), strong(detail$path))
+        ),
+        tags$details(class = "workspace-gate-geometry",
+          tags$summary(detail$geometry$summary),
+          tags$pre(detail$geometry$exact)
+        )
+      )
+    }
+
+    workspace_gate_bulk_actions <- function(session, group_choices, gate_ids) {
+      if (!length(group_choices) || !length(gate_ids)) return(NULL)
+      target_id <- session$ns("target_group")
+      gate_value <- paste(unique(gate_ids), collapse = ",")
+      div(class = "workspace-gate-actionbar",
+        selectInput(target_id, "Target group", choices = group_choices),
+        div(class = "d-flex gap-2 flex-wrap",
+          tags$button(type = "button", class = "btn btn-outline-secondary",
+            onclick = sprintf("var g=document.getElementById('%s').value; if(g) Shiny.setInputValue('%s',{gate:'%s',targetType:'group',targetId:g,mode:'copy',nonce:Math.random()},{priority:'event'});", target_id, session$ns("workspace_drop"), gate_value),
+            "Copy to Group"
+          ),
+          tags$button(type = "button", class = "btn btn-primary",
+            onclick = sprintf("var g=document.getElementById('%s').value; if(g) Shiny.setInputValue('%s',{gate:'%s',targetType:'group',targetId:g,mode:'sync',nonce:Math.random()},{priority:'event'});", target_id, session$ns("workspace_drop"), gate_value),
+            "Sync to Group"
+          )
+        )
+      )
+    }
+
+    # Agent note: Keep the click-time key list authoritative; DOM selection can be transiently stale when native dragstart fires.
+    workspace_drag_row_keys_js <- "var keys=(window.flowjoWorkspaceSelectedKeys||[]).slice(); if(keys.indexOf(this.dataset.rowKey)<0) keys=[this.dataset.rowKey]; var gateIds=keys.map(function(k){var p=k.split('::'); return p[0]==='gate'?p[2]:'';}).filter(Boolean); console.debug('[workspace-basket] dragstart payloadKeys='+keys.length); event.dataTransfer.setData('application/x-flowjo-workspace-rows',keys.join(',')); event.dataTransfer.setData('text/plain',gateIds.join(','));"
 
     add_gate_pairs_to_basket <- function(pairs) {
       if (is.null(pairs) || !nrow(pairs)) return(0L)
@@ -284,15 +453,23 @@ workspace_page_server <- function(id, shared) {
       reg <- shared$fcs$registry()
       groups <- shared$gating$groups()
       gates <- shared$gating$gates()
+      message("[workspace] render tree samples=", length(reg), " groups=", length(groups), " gates=", length(gates))
       if (!length(reg)) return(div(class = "gate-nav-empty", "No samples loaded."))
-      sel <- selected()
-      picked <- selected_rows()
+      # Agent note: Row clicks update details and client-side highlight; do not make
+      # the tree itself reactive to selection or the scroll position resets.
+      sel <- isolate(selected())
+      picked <- isolate(selected_rows())
 
-      gate_node <- function(gid, sid, depth) {
+      fold_control <- function() tags$button(type = "button", class = "workspace-fold-toggle", `aria-expanded` = "true", title = "Fold / unfold children",
+        onclick = "event.preventDefault();event.stopPropagation();var branch=this.closest('.workspace-tree-branch');var folded=branch.classList.toggle('workspace-folded');this.setAttribute('aria-expanded',String(!folded));", icon("chevron-down"))
+
+      gate_node <- function(gid, sid, depth, group_id = "") {
         g <- gates[[gid]]
-        key <- workspace_row_key("gate", sid, gid)
+        key <- workspace_row_key("gate", sid, gid, group_id)
         chosen <- key %in% picked
-        div(
+        children <- flowjo_gate_children(gates, gid)
+        children <- children[vapply(children, function(id) isTRUE(flowjo_gate_applicability(reg[[sid]], gates[[id]], gates)$ok), logical(1))]
+        row <- div(
           class = paste("gate-nav-row gate-nav-gate workspace-drop-row workspace-select-row", if (identical(sel$type, "gate") && identical(sel$id, gid) && identical(sel$sample, sid)) "active" else "", if (chosen) "selected" else "", flowjo_gate_group_state(g)),
           draggable = "true",
           ondragstart = workspace_drag_row_keys_js,
@@ -302,20 +479,28 @@ workspace_page_server <- function(id, shared) {
           `data-row-key` = key,
           `data-gate-id` = gid,
           `data-sample-id` = sid,
-          ondblclick = sprintf("Shiny.setInputValue('%s',{sample:'%s',gate:'%s',nonce:Math.random()},{priority:'event'});", session$ns("open_workspace_gate"), sid, gid),
-          onclick = workspace_row_select_js(session$ns("workspace_select"), "gate", key, gid, sid, gid),
-          span(class = "gate-tree-name", style = sprintf("padding-left:%dpx", depth * 16L), g$name %||% gid),
+          ondblclick = sprintf("event.preventDefault(); event.stopPropagation(); Shiny.setInputValue('%s',{sample:'%s',gate:'%s',nonce:Math.random()},{priority:'event'}); return false;", session$ns("open_workspace_gate"), sid, gid),
+          onclick = paste0(
+            sprintf("if(event.detail>1){event.preventDefault(); event.stopPropagation(); Shiny.setInputValue('%s',{sample:'%s',gate:'%s',nonce:Math.random()},{priority:'event'}); return false;} ", session$ns("open_workspace_gate"), sid, gid),
+            workspace_row_select_js(session$ns("workspace_select"), "gate", key, gid, sid, gid)
+          ),
+          span(class = "workspace-tree-label", style = sprintf("padding-left:%dpx", depth * 16L),
+            if (length(children)) fold_control() else span(class = "workspace-fold-spacer"),
+            span(class = "gate-tree-name", g$name %||% gid)),
           span(class = "gate-node-meta", gate_stat_label(sid, gid)),
           span(class = paste("gate-state-badge", flowjo_gate_group_state(g)), sync_label(g))
         )
+        if (!length(children)) return(row)
+        div(class = "workspace-tree-branch", style = sprintf("--workspace-level:%d;--workspace-parent-z:%d", depth + 1L, 100L - depth),
+          row, div(class = "workspace-branch-children", lapply(children, function(id) gate_node(id, sid, depth + 1L, group_id))))
       }
 
-      sample_node <- function(sid, grouped = FALSE) {
+      sample_node <- function(sid, grouped = FALSE, group_id = "") {
         e <- reg[[sid]]
         rows <- gate_rows_for_sample(gates, e)
         key <- workspace_row_key("sample", sid, "")
         chosen <- key %in% picked
-        div(class = "workspace-sample-node",
+        div(class = "workspace-sample-node workspace-tree-branch", style = sprintf("--workspace-level:%d;--workspace-parent-z:110", if (grouped) 1L else 0L),
           div(
             class = paste("gate-nav-row gate-nav-sample workspace-drop-row workspace-select-row", if (identical(sel$type, "sample") && identical(sel$id, sid)) "active" else "", if (chosen) "selected" else ""),
             draggable = "true",
@@ -327,16 +512,19 @@ workspace_page_server <- function(id, shared) {
             `data-sample-id` = sid,
             ondblclick = sprintf("Shiny.setInputValue('%s',{sample:'%s',nonce:Math.random()},{priority:'event'});", session$ns("open_workspace_sample"), sid),
             onclick = workspace_row_select_js(session$ns("workspace_select"), "sample", key, sid, sid, ""),
+            if (length(rows)) fold_control() else span(class = "workspace-fold-spacer"),
             span(class = "gate-nav-name", e$name %||% sid),
             span(class = "gate-nav-meta", sprintf("%s events", format(e$cells %||% nrow(e$df), big.mark = ",")))
           ),
-          if (length(rows)) lapply(rows, function(x) gate_node(x$id, sid, x$depth + if (isTRUE(grouped)) 1L else 0L))
+          div(class = "workspace-branch-children", lapply(flowjo_gate_children(gates, "root"), function(id) {
+            if (isTRUE(flowjo_gate_applicability(e, gates[[id]], gates)$ok)) gate_node(id, sid, if (grouped) 1L else 0L, group_id)
+          }))
         )
       }
 
       group_node <- function(gid) {
         g <- groups[[gid]]
-        div(class = "gate-nav-group",
+        div(class = "gate-nav-group workspace-tree-branch", style = "--workspace-level:0;--workspace-parent-z:120",
           div(
             class = paste("gate-nav-row gate-nav-group-head", if (identical(sel$type, "group") && identical(sel$id, gid)) "active" else ""),
             style = sprintf("--group-color:%s", g$color %||% "#2563EB"),
@@ -344,31 +532,18 @@ workspace_page_server <- function(id, shared) {
             ondragleave = "this.classList.remove('drop-target');",
             ondrop = sprintf("event.preventDefault(); this.classList.remove('drop-target'); Shiny.setInputValue('%s',{gate:event.dataTransfer.getData('text/plain'),targetType:'group',targetId:'%s',nonce:Math.random()},{priority:'event'});", session$ns("workspace_drop"), gid),
             onclick = sprintf("Shiny.setInputValue('%s',{type:'group',id:'%s',nonce:Math.random()},{priority:'event'});", session$ns("workspace_select"), gid),
+            fold_control(),
             span(class = "gate-nav-name", icon("folder"), " ", g$name %||% gid),
             span(class = "gate-nav-meta", sprintf("%d samples", length(g$sample_ids %||% character()))),
             span(class = paste("gate-state-badge", if (isTRUE(g$sync_enabled)) "synced" else "sample-modified"), if (isTRUE(g$sync_enabled)) "Sync on" else "Sync off"),
             span(class = "workspace-drop-target-label", "drop here")
           ),
-          lapply(g$sample_ids %||% character(), function(sid) if (!is.null(reg[[sid]])) sample_node(sid, TRUE))
+          div(class = "workspace-branch-children", lapply(g$sample_ids %||% character(), function(sid) if (!is.null(reg[[sid]])) sample_node(sid, TRUE, gid)))
         )
       }
 
       grouped_ids <- unique(unlist(lapply(groups, function(g) g$sample_ids %||% character()), use.names = FALSE))
-      div(class = "gate-nav-section workspace-tree",
-        div(
-          class = "workspace-new-group-drop",
-          ondragover = "event.preventDefault(); this.classList.add('drop-target');",
-          ondragleave = "this.classList.remove('drop-target');",
-          ondrop = sprintf("event.preventDefault(); this.classList.remove('drop-target'); Shiny.setInputValue('%s',{keys:event.dataTransfer.getData('application/x-flowjo-workspace-rows'),nonce:Math.random()},{priority:'event'});", session$ns("workspace_new_group_drop")),
-          icon("plus"), " New Group"
-        ),
-        div(
-          class = "workspace-basket-drop",
-          ondragover = "event.preventDefault(); this.classList.add('drop-target');",
-          ondragleave = "this.classList.remove('drop-target');",
-          ondrop = sprintf("event.preventDefault(); this.classList.remove('drop-target'); Shiny.setInputValue('%s',{keys:event.dataTransfer.getData('application/x-flowjo-workspace-rows'),nonce:Math.random()},{priority:'event'});", session$ns("workspace_basket_drop")),
-          icon("basket-shopping"), " Add selected gates to Basket"
-        ),
+      div(class = "gate-nav-section workspace-tree Pinhki-scroll-fade",
         if (length(groups)) lapply(names(groups), group_node),
         div(class = "gate-nav-ungrouped",
           div(class = "gate-nav-section-title", "All Samples"),
@@ -384,6 +559,7 @@ workspace_page_server <- function(id, shared) {
       sel <- selected()
       tbl <- shared$fcs$table()
       group_choices <- workspace_group_choices(groups)
+      message("[workspace] render details samples=", length(reg), " table_rows=", nrow(tbl), " selected=", sel$type %||% "<none>")
 
       if (identical(sel$type, "group") || identical(sel$type, "new_group")) {
         g <- if (!is.null(sel$id)) groups[[sel$id]] else NULL
@@ -399,35 +575,50 @@ workspace_page_server <- function(id, shared) {
             actionButton(session$ns("save_group"), "Save Group", class = "btn btn-primary"),
             if (!identical(sel$type, "new_group")) actionButton(session$ns("delete_group"), "Delete", class = "btn btn-outline-danger")
           ),
-          hr(),
-          h5("Group synced gate tree"),
-          uiOutput(session$ns("workspace_group_gates"))
+          p("Gate hierarchy is shown in the Workspace Tree. Synchronization applies edits to the selected group samples.")
         )
       } else if (identical(sel$type, "sample")) {
         e <- reg[[sel$id]]
         if (is.null(e)) return(helpText("Select a sample."))
-        stats <- workspace_stats()
-        stats <- stats[stats$sample_id == sel$id, , drop = FALSE]
-        show_cols <- intersect(c("gate_name", "gate_type", "cells", "parent_cells", "percent_parent"), names(stats))
+        member_groups <- names(groups)[vapply(groups, function(g) sel$id %in% (g$sample_ids %||% character()), logical(1))]
         tagList(
           h4(e$name %||% sel$id),
-          div(class = "gate-node-meta", sprintf("%s events", format(e$cells %||% nrow(e$df), big.mark = ","))),
-          if (nrow(stats)) tags$table(class = "table table-sm",
-            tags$thead(tags$tr(lapply(show_cols, tags$th))),
-            tags$tbody(lapply(seq_len(nrow(stats)), function(i) tags$tr(lapply(show_cols, function(col) tags$td(as.character(stats[[col]][[i]]))))))
-          ) else helpText("No gates for this sample.")
+          p(sprintf("%s events", format(e$cells %||% nrow(e$df), big.mark = ","))),
+          tags$dl(tags$dt("Source file"), tags$dd(e$path %||% "Unavailable"),
+            tags$dt("Groups"), tags$dd(paste(vapply(member_groups, function(id) groups[[id]]$name %||% id, character(1)), collapse = ", ")),
+            tags$dt("Compensation"), tags$dd(e$compensation_name %||% "Not recorded"),
+            tags$dt("Notes"), tags$dd(e$notes %||% "")),
+          tags$details(tags$summary("Channel transforms"), tags$ul(lapply(names(e$wsp_axis_transforms %||% list()), function(ch) tags$li(paste(ch, e$wsp_axis_transforms[[ch]]$type, sep = ": ")))))
         )
       } else if (identical(sel$type, "gate")) {
-        g <- gates[[sel$id]]
-        if (is.null(g)) return(helpText("Select a gate."))
-        sid <- sel$sample
-        st <- gate_stat(sid, sel$id)
-        target_id <- session$ns("target_group")
+        selected_gate_rows <- workspace_selected_gate_rows()
+        if (!nrow(selected_gate_rows)) {
+          selected_gate_rows <- data.frame(sample_id = sel$sample %||% "", gate_id = sel$id %||% "", stringsAsFactors = FALSE)
+        }
+        details <- Filter(Negate(is.null), lapply(seq_len(nrow(selected_gate_rows)), function(i) {
+          workspace_gate_detail(selected_gate_rows$sample_id[[i]], selected_gate_rows$gate_id[[i]], reg, groups, gates)
+        }))
+        if (!length(details)) return(helpText("Select a gate."))
+        gate_ids <- vapply(details, function(x) x$gate_id, character(1))
+
+        if (length(details) > 1L) {
+          return(tagList(
+            div(class = "workspace-gate-detail-summary",
+              h4(sprintf("%d selected gates", length(details))),
+              div(class = "gate-node-meta", "Stacked gate details use sample metrics where available; group gates are shown as templates.")
+            ),
+            workspace_gate_bulk_actions(session, group_choices, gate_ids),
+            div(class = "workspace-gate-detail-stack",
+              lapply(details, workspace_gate_detail_block, session = session, group_choices = group_choices, rich = FALSE)
+            )
+          ))
+        }
+
+        detail <- details[[1]]
+        g <- detail$gate
         tagList(
-          h4(g$name %||% sel$id),
-          div(class = "gate-node-meta", sprintf("%s / %s | %s", g$x_channel, g$y_channel %||% "", flowjo_gate_group_state(g))),
-          if (!is.null(st)) div(sprintf("%s cells, %.2f%% parent", format(st$cells, big.mark = ","), st$percent_parent)),
-          if (identical(flowjo_gate_group_state(g), "sample-modified")) div(class = "mt-2",
+          workspace_gate_detail_block(detail, session, group_choices, rich = TRUE),
+          if (identical(detail$state, "sample-modified")) div(class = "mt-2",
             div(class = "gate-state-badge sample-modified", "Sample modified"),
             div(class = "gate-node-meta", "This sample has a local gate edit."),
             div(class = "d-flex gap-2 mt-2",
@@ -435,17 +626,7 @@ workspace_page_server <- function(id, shared) {
               actionButton(session$ns("promote_sample_gate"), "Sync this edit to group", class = "btn btn-primary btn-sm")
             )
           ),
-          if (length(group_choices)) selectInput(target_id, "Target group", choices = group_choices),
-          if (length(group_choices)) div(class = "d-flex gap-2 mt-2",
-            tags$button(type = "button", class = "btn btn-outline-secondary",
-              onclick = sprintf("var g=document.getElementById('%s').value; if(g) Shiny.setInputValue('%s',{gate:'%s',targetType:'group',targetId:g,mode:'copy',nonce:Math.random()},{priority:'event'});", target_id, session$ns("workspace_drop"), sel$id),
-              "Copy to Group"
-            ),
-            tags$button(type = "button", class = "btn btn-primary",
-              onclick = sprintf("var g=document.getElementById('%s').value; if(g) Shiny.setInputValue('%s',{gate:'%s',targetType:'group',targetId:g,mode:'sync',nonce:Math.random()},{priority:'event'});", target_id, session$ns("workspace_drop"), sel$id),
-              "Sync to Group"
-            )
-          )
+          workspace_gate_bulk_actions(session, group_choices, detail$gate_id)
         )
       } else {
         tagList(
@@ -455,7 +636,6 @@ workspace_page_server <- function(id, shared) {
         )
       }
     })
-
     output$workspace_group_gates <- renderUI({
       gates <- shared$gating$gates()
       groups <- shared$gating$groups()
@@ -511,14 +691,11 @@ workspace_page_server <- function(id, shared) {
 
     observeEvent(input$workspace_select, {
       msg <- input$workspace_select
-      selected(list(type = msg$type, id = msg$id, sample = msg$sample %||% NULL))
       keys <- as.character(msg$keys %||% character())
       selected_rows(unique(keys[nzchar(keys)]))
+      selected(list(type = msg$type, id = msg$id, sample = msg$sample %||% NULL))
       if (identical(msg$type, "group")) editing_group(msg$id)
       if (identical(msg$type, "sample")) shared$fcs$set_active(msg$id)
-      if (identical(msg$type, "gate")) {
-        # Agent note: Workspace gate clicks are inspection-only; double-click/open sets active gate to avoid plot refresh latency here.
-      }
     }, ignoreInit = TRUE)
 
     observeEvent(selected(), {
@@ -543,8 +720,51 @@ workspace_page_server <- function(id, shared) {
       showNotification(sprintf("Added %d population%s to the basket.", added, if (added == 1L) "" else "s"), type = if (added) "message" else "warning")
     }, ignoreInit = TRUE)
 
+    observeEvent(input$select_equivalent_gates, {
+      parts <- workspace_selected_parts("gate")
+      if (!length(parts)) {
+        showNotification("Select a gate in a group first.", type = "warning")
+        return()
+      }
+      current <- selected()
+      anchor_idx <- which(vapply(parts, function(x) identical(x[[2]], current$sample %||% "") && identical(x[[3]], current$id %||% ""), logical(1)))
+      anchor <- parts[[if (length(anchor_idx)) anchor_idx[[1]] else length(parts)]]
+      group_id <- if (length(anchor) >= 4L) anchor[[4]] else ""
+      group <- shared$gating$groups()[[group_id]]
+      gates <- shared$gating$gates()
+      if (is.null(group) || is.null(gates[[anchor[[3]]]])) {
+        showNotification("Select a gate from the current group, not All Samples.", type = "warning")
+        return()
+      }
+      path_names <- function(gid) {
+        out <- character(); seen <- character()
+        while (nzchar(gid %||% "") && !identical(gid, "root") && !(gid %in% seen) && !is.null(gates[[gid]])) {
+          seen <- c(seen, gid); out <- c(gates[[gid]]$name %||% gid, out); gid <- gates[[gid]]$parent_id %||% "root"
+        }
+        out
+      }
+      group_parts <- Filter(function(x) length(x) >= 4L && identical(x[[4]], group_id), parts)
+      wanted_paths <- lapply(group_parts, function(x) path_names(x[[3]]))
+      wanted_paths <- wanted_paths[!duplicated(vapply(wanted_paths, function(x) paste(x, collapse = "\r"), character(1)))]
+      keys <- character()
+      reg <- shared$fcs$registry()
+      for (sid in group$sample_ids %||% character()) {
+        if (is.null(reg[[sid]])) next
+        for (wanted in wanted_paths) {
+          hits <- names(gates)[vapply(names(gates), function(gid) {
+            isTRUE(flowjo_gate_applicability(reg[[sid]], gates[[gid]], gates)$ok) && identical(path_names(gid), wanted)
+          }, logical(1))]
+          if (length(hits)) keys <- c(keys, workspace_row_key("gate", sid, hits[[1]], group_id))
+        }
+      }
+      selected_rows(unique(keys))
+      session$sendCustomMessage("flowjo-workspace-selection", list(keys = unique(keys)))
+      showNotification(sprintf("Selected %d equivalent gate%s.", length(unique(keys)), if (length(unique(keys)) == 1L) "" else "s"), type = "message")
+    }, ignoreInit = TRUE)
+
     observeEvent(input$workspace_basket_drop, {
       pairs <- row_keys_to_gate_pairs(input$workspace_basket_drop$keys)
+      message("[workspace-basket] drop_keys=", length(workspace_drag_ids(input$workspace_basket_drop$keys)), " parsed_pairs=", nrow(pairs))
       added <- add_gate_pairs_to_basket(pairs)
       showNotification(sprintf("Added %d population%s to the basket.", added, if (added == 1L) "" else "s"), type = if (added) "message" else "warning")
     }, ignoreInit = TRUE)
@@ -609,19 +829,38 @@ workspace_page_server <- function(id, shared) {
     }, ignoreInit = TRUE)
 
     observeEvent(input$open_workspace_sample, {
+      msg <- input$open_workspace_sample
+      ready_token <- paste0("workspace-open-", as.integer(Sys.time()), "-", sample.int(1e9, 1L))
       overlay_show("Opening Gating...", tip = "Preparing the selected sample.")
-      shared$fcs$set_active(input$open_workspace_sample$sample)
-      shared$gating$active_gate_id(NULL)
-      shiny::updateNavbarPage(session, "main_nav", selected = "gating_tab")
-      session$onFlushed(function() overlay_hide(), once = TRUE)
+      isolate({
+        shared$fcs$set_active(msg$sample)
+        shared$gating$active_gate_id(NULL)
+      })
+      shared$ui$request_nav_route("gating_tab")
+      overlay_hide_when_output_ready(
+        "gating-canvas_wrap_left",
+        ready_selector = ".gate-canvas-points[data-flowjo-canvas-ready='true']",
+        ready_token = ready_token,
+        timeout_ms = 120000L
+      )
     }, ignoreInit = TRUE)
 
     observeEvent(input$open_workspace_gate, {
+      msg <- input$open_workspace_gate
+      ready_token <- paste0("workspace-open-", as.integer(Sys.time()), "-", sample.int(1e9, 1L))
+      message("[workspace] open gate sample=", msg$sample %||% "<null>", " gate=", msg$gate %||% "<null>")
       overlay_show("Opening Gating...", tip = "Preparing the selected gate.")
-      shared$fcs$set_active(input$open_workspace_gate$sample)
-      shared$gating$active_gate_id(input$open_workspace_gate$gate)
-      shiny::updateNavbarPage(session, "main_nav", selected = "gating_tab")
-      session$onFlushed(function() overlay_hide(), once = TRUE)
+      isolate({
+        shared$fcs$set_active(msg$sample)
+        shared$gating$active_gate_id(msg$gate)
+      })
+      shared$ui$request_nav_route("gating_tab")
+      overlay_hide_when_output_ready(
+        "gating-canvas_wrap_left",
+        ready_selector = ".gate-canvas-points[data-flowjo-canvas-ready='true']",
+        ready_token = ready_token,
+        timeout_ms = 120000L
+      )
     }, ignoreInit = TRUE)
 
     observeEvent(input$reset_sample_gate, {

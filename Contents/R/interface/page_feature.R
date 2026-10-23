@@ -64,7 +64,7 @@ feature_page_server <- function(id, shared) {
     })
 
     observeEvent(input$go_umap_tab, {
-      shiny::updateNavbarPage(session = session, inputId = "main_nav", selected = "umap_tab")
+      app_nav_select(shared$session, "umap_tab")
     }, ignoreInit = TRUE)
     # ---- Transform data (using saved settings) ----
     observe({

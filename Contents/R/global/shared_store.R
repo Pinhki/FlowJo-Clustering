@@ -10,6 +10,7 @@ make_shared_store <- function(session) {
   scale_settings    <- reactiveVal(list())
   auto_scale_settings <- reactiveVal(list())
   feature_scale_setting <- reactiveVal(list(type = "none"))
+  compensation_library <- reactiveVal(list())
   
   flowsom_df        <- reactiveVal(NULL)  # either merged CSV or sent from UMAP page
   flowsom_order     <- reactiveVal(NULL)
@@ -19,6 +20,8 @@ make_shared_store <- function(session) {
   fcs_registry      <- reactiveVal(list())
   active_fcs_id     <- reactiveVal(NULL)
   auto_switch_umap  <- reactiveVal(FALSE)
+  plot_preload_request <- reactiveVal(0L)
+  nav_route_request <- reactiveVal(NULL)
 
   preprocess_result <- reactiveVal(NULL)
   isolated_pops     <- reactiveVal(NULL)
@@ -55,8 +58,33 @@ make_shared_store <- function(session) {
     ylab            = reactiveVal(""),
     title_size      = reactiveVal(20),
     axis_title_size = reactiveVal(14),
-    axis_text_size  = reactiveVal(12)
+    axis_text_size  = reactiveVal(12),
+    plot_cache_enabled = reactiveVal(TRUE),
+    plot_event_limit_enabled = reactiveVal(TRUE),
+    plot_event_limit = reactiveVal(75000L),
+    plot_cache_mode = reactiveVal("settings"),
+    plot_cache_max_contexts = reactiveVal(50L),
+    plot_preload_enabled = reactiveVal(TRUE),
+    plot_preload_after_load = reactiveVal(TRUE),
+    plot_preload_scope = reactiveVal("all")
   )
+
+  request_plot_preload <- function() {
+    # Agent note: This helper is called from delayed workspace-restore callbacks; isolate the read so background preload can be requested outside a reactive consumer.
+    plot_preload_request(as.integer(shiny::isolate(plot_preload_request())) + 1L)
+    invisible(TRUE)
+  }
+
+  gating_sample_request <- reactiveVal(NULL)
+  request_gating_sample <- function(sample_id) {
+    gating_sample_request(list(sample_id = sample_id, nonce = stats::runif(1)))
+    invisible(TRUE)
+  }
+
+  request_nav_route <- function(tab) {
+    nav_route_request(list(tab = tab, nonce = stats::runif(1)))
+    invisible(TRUE)
+  }
   
   # choices bundle
   choices <- list(
@@ -102,7 +130,177 @@ make_shared_store <- function(session) {
     !has_umap_cols(entry) && !has_advanced_gating()
   }
 
+  compensation_normalize_matrix <- function(value) {
+    matrix_value <- tryCatch(as.matrix(value), error = function(e) NULL)
+    if (is.null(matrix_value) || length(dim(matrix_value)) != 2L || nrow(matrix_value) < 2L || nrow(matrix_value) != ncol(matrix_value)) return(NULL)
+    suppressWarnings(storage.mode(matrix_value) <- "double")
+    if (any(!is.finite(matrix_value))) return(NULL)
+    channels <- colnames(matrix_value)
+    if (is.null(channels) || length(channels) != ncol(matrix_value) || any(!nzchar(channels))) channels <- rownames(matrix_value)
+    if (is.null(channels) || length(channels) != ncol(matrix_value) || any(!nzchar(channels))) channels <- paste0("Channel ", seq_len(ncol(matrix_value)))
+    channels <- make.unique(as.character(channels), sep = "_")
+    dimnames(matrix_value) <- list(channels, channels)
+    matrix_value
+  }
+
+  compensation_signature <- function(matrix_value) {
+    if (is.null(matrix_value)) return("")
+    payload <- list(dim = dim(matrix_value), channels = colnames(matrix_value), values = signif(as.numeric(matrix_value), 12))
+    if (requireNamespace("digest", quietly = TRUE)) return(digest::digest(payload, algo = "xxhash64"))
+    paste(c(dim(matrix_value), colnames(matrix_value), signif(as.numeric(matrix_value), 12)), collapse = "\u001f")
+  }
+
+  compensation_is_invertible <- function(matrix_value) {
+    isTRUE(tryCatch({ solve(matrix_value); TRUE }, error = function(e) FALSE))
+  }
+
+  compensation_map_entry_channels <- function(matrix_value, entry) {
+    matrix_value <- compensation_normalize_matrix(matrix_value)
+    if (is.null(matrix_value) || is.null(entry$channel_map) || !nrow(entry$channel_map) || !all(c("channel", "marker") %in% names(entry$channel_map))) return(matrix_value)
+    raw_channels <- colnames(matrix_value)
+    mapped <- raw_channels
+    hits <- match(raw_channels, as.character(entry$channel_map$channel))
+    mapped[!is.na(hits)] <- as.character(entry$channel_map$marker[hits[!is.na(hits)]])
+    mapped[is.na(mapped) | !nzchar(mapped)] <- raw_channels[is.na(mapped) | !nzchar(mapped)]
+    mapped <- make.unique(mapped, sep = "_")
+    dimnames(matrix_value) <- list(mapped, mapped)
+    matrix_value
+  }
+
+  compensation_register <- function(matrix_value, preferred_id = NULL, name = NULL, source = "manual", sample_ids = character()) {
+    matrix_value <- compensation_normalize_matrix(matrix_value)
+    if (is.null(matrix_value)) return(NULL)
+    preferred <- if (length(preferred_id) && !is.na(preferred_id[[1]])) trimws(as.character(preferred_id[[1]])) else ""
+    display_name <- if (length(name) && !is.na(name[[1]]) && nzchar(trimws(as.character(name[[1]])))) trimws(as.character(name[[1]])) else preferred
+    base_id <- if (nzchar(preferred)) gsub("[^A-Za-z0-9_.-]+", "_", preferred) else paste0("manual_", substr(compensation_signature(matrix_value), 1L, 12L))
+    if (!nzchar(base_id)) base_id <- "manual_matrix"
+    if (!nzchar(display_name)) display_name <- base_id
+    signature <- compensation_signature(matrix_value)
+    candidate <- base_id
+    library <- compensation_library()
+    if (!is.null(library[[candidate]]) && !identical(library[[candidate]]$signature, signature)) candidate <- paste0(base_id, "_", substr(signature, 1L, 12L))
+    prior <- library[[candidate]]
+    if (!is.null(prior)) {
+      prior$source_sample_ids <- unique(c(prior$source_sample_ids %||% character(), sample_ids %||% character()))
+      prior$updated_at <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+      if (is.null(prior$source) || !nzchar(prior$source)) prior$source <- source %||% "manual"
+      library[[candidate]] <- prior
+    } else {
+      library[[candidate]] <- list(
+        id = candidate,
+        name = display_name %||% candidate,
+        matrix = matrix_value,
+        original_matrix = matrix_value,
+        channels = colnames(matrix_value),
+        signature = signature,
+        source = source %||% "manual",
+        source_sample_ids = unique(sample_ids %||% character()),
+        created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+        updated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+      )
+    }
+    compensation_library(library)
+    candidate
+  }
+
+  compensation_register_entry <- function(entry) {
+    if (is.null(entry) || is.null(entry$spillover)) return(entry)
+    raw_channels <- colnames(entry$spillover) %||% rownames(entry$spillover) %||% character()
+    entry$compensation_raw_channels <- entry$compensation_raw_channels %||% raw_channels
+    entry$spillover <- compensation_map_entry_channels(entry$spillover, entry)
+    source <- entry$compensation_source %||% if (!is.null(entry$wsp_sample_id)) "WSP" else "FCS"
+    id <- compensation_register(
+      entry$spillover,
+      preferred_id = entry$compensation_id,
+      name = entry$compensation_name %||% entry$compensation_id,
+      source = source,
+      sample_ids = entry$id %||% character()
+    )
+    if (is.null(id)) return(entry)
+    entry$compensation_id <- id
+    entry$compensation_name <- compensation_library()[[id]]$name %||% id
+    entry$compensation_source <- source
+    entry$compensation_channels <- colnames(compensation_library()[[id]]$matrix)
+    entry$spillover <- compensation_library()[[id]]$matrix
+    entry
+  }
+
+  compensation_register_entries <- function(entries) {
+    if (!length(entries)) return(entries)
+    lapply(entries, compensation_register_entry)
+  }
+
+  compensation_update <- function(id, matrix_value, name = NULL, source = "manual") {
+    library <- compensation_library()
+    if (is.null(library[[id]])) return(FALSE)
+    matrix_value <- compensation_normalize_matrix(matrix_value)
+    if (is.null(matrix_value) || !compensation_is_invertible(matrix_value)) return(FALSE)
+    library[[id]]$matrix <- matrix_value
+    library[[id]]$channels <- colnames(matrix_value)
+    library[[id]]$signature <- compensation_signature(matrix_value)
+    library[[id]]$source <- source %||% "manual"
+    if (!is.null(name) && nzchar(trimws(name))) library[[id]]$name <- trimws(name)
+    library[[id]]$updated_at <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+    compensation_library(library)
+    reg <- fcs_registry()
+    for (sample_id in names(reg)) {
+      if (identical(reg[[sample_id]]$compensation_id %||% NULL, id)) {
+        reg[[sample_id]]$spillover <- matrix_value
+        reg[[sample_id]]$compensation_channels <- colnames(matrix_value)
+        reg[[sample_id]]$compensation_name <- library[[id]]$name
+        reg[[sample_id]]$compensation_source <- source %||% "manual"
+      }
+    }
+    fcs_registry(reg)
+    preprocess_result(NULL)
+    df_processed(NULL)
+    TRUE
+  }
+
+  compensation_reset <- function(id) {
+    original <- compensation_library()[[id]]$original_matrix %||% NULL
+    if (is.null(original)) return(FALSE)
+    compensation_update(id, original, source = compensation_library()[[id]]$source %||% "WSP")
+  }
+
+  compensation_assign <- function(id, sample_ids) {
+    matrix_value <- compensation_library()[[id]]$matrix %||% NULL
+    if (is.null(matrix_value)) return(FALSE)
+    reg <- fcs_registry()
+    sample_ids <- intersect(as.character(sample_ids %||% character()), names(reg))
+    if (!length(sample_ids)) return(FALSE)
+    for (sample_id in sample_ids) {
+      reg[[sample_id]]$compensation_id <- id
+      reg[[sample_id]]$compensation_name <- compensation_library()[[id]]$name %||% id
+      reg[[sample_id]]$compensation_source <- "assigned"
+      reg[[sample_id]]$compensation_channels <- colnames(matrix_value)
+      reg[[sample_id]]$spillover <- matrix_value
+    }
+    fcs_registry(reg)
+    preprocess_result(NULL)
+    df_processed(NULL)
+    TRUE
+  }
+
+  compensation_remove <- function(id) {
+    library <- compensation_library()
+    if (is.null(library[[id]])) return(FALSE)
+    reg <- fcs_registry()
+    if (any(vapply(reg, function(entry) identical(entry$compensation_id %||% NULL, id), logical(1)))) return(FALSE)
+    library[[id]] <- NULL
+    compensation_library(library)
+    TRUE
+  }
+
+  compensation_rebuild <- function(entries = fcs_registry()) {
+    compensation_library(list())
+    rebuilt <- compensation_register_entries(entries)
+    rebuilt
+  }
+
   fcs_add <- function(entry, activate = TRUE) {
+    entry <- compensation_register_entry(entry)
+    entry$.cache_revision <- paste0(format(Sys.time(), "%Y%m%d%H%M%OS6"), "-", sample.int(.Machine$integer.max, 1L))
     reg <- fcs_registry()
     reg[[entry$id]] <- entry
     fcs_registry(reg)
@@ -115,8 +313,12 @@ make_shared_store <- function(session) {
   fcs_add_many <- function(entries) {
     entries <- entries[lengths(entries) > 0]
     if (!length(entries)) return(invisible(FALSE))
+    entries <- compensation_register_entries(entries)
     reg <- fcs_registry()
-    for (entry in entries) reg[[entry$id]] <- entry
+    for (entry in entries) {
+      entry$.cache_revision <- paste0(format(Sys.time(), "%Y%m%d%H%M%OS6"), "-", sample.int(.Machine$integer.max, 1L))
+      reg[[entry$id]] <- entry
+    }
     fcs_registry(reg)
     set_active_from_entry(entries[[length(entries)]])
     auto_switch_umap(should_land_on_gating(entries[[length(entries)]]))
@@ -219,16 +421,78 @@ make_shared_store <- function(session) {
     names(df)[vapply(df, is.numeric, logical(1))]
   }
 
-  analysis_source_data <- function(source = c("fcs", "batch")) {
+  analysis_source_data <- function(source = c("fcs", "basket", "batch"), population_ids = NULL) {
     source <- match.arg(source)
+    if (identical(source, "basket")) {
+      items <- population_items()
+      if (is.null(population_ids) || !length(population_ids)) stop("Select populations before creating an analysis object.")
+      if (!all(population_ids %in% names(items))) stop("The population basket changed. Review your selection again.")
+      items <- items[population_ids]
+      valid <- vapply(items, function(item) {
+        entry <- fcs_registry()[[item$sample_id]]
+        keep <- gate_memberships()[[item$sample_id]][[item$gate_id]]
+        !is.null(entry) && !is.null(gate_tree()[[item$gate_id]]) && length(keep) == nrow(entry$df) && any(keep, na.rm = TRUE)
+      }, logical(1))
+      if (!all(valid)) stop("A selected population is empty or unavailable. Review the basket before creating the object.")
+      for (i in seq_along(items)) items[[i]]$include <- TRUE
+      cc <- flowjo_population_concat(
+        fcs_registry(), gate_tree(), gate_memberships(), items, mode = "all"
+      )
+      mk <- intersect(cc$markers %||% analysis_numeric_cols(cc$data), names(cc$data))
+      return(list(
+        data = cc$data,
+        markers = mk,
+        channel_map = data.frame(channel = mk, marker = mk, stringsAsFactors = FALSE),
+        transform_settings = list(),
+        badge = "Basket",
+        label = "Population Basket",
+        source_id = "basket", selection = cc$mapping
+      ))
+    }
     if (identical(source, "batch")) {
       dat <- concat_data()
       mk <- concat_markers() %||% analysis_numeric_cols(dat)
-      return(list(data = dat, markers = intersect(mk, names(dat)), badge = "Batch", label = "Batch Concatenation"))
+      mk <- intersect(mk, names(dat))
+      return(list(data = dat, markers = mk, channel_map = data.frame(channel = mk, marker = mk, stringsAsFactors = FALSE), transform_settings = list(), badge = "Batch", label = "Batch Concatenation", source_id = "batch"))
     }
     dat <- df_raw()
     mk <- analysis_numeric_cols(dat)
-    list(data = dat, markers = mk, badge = "FCS", label = "Current FCS")
+    active_id <- active_fcs_id()
+    entry <- if (!is.null(active_id) && isTRUE(nzchar(active_id))) fcs_registry()[[active_id]] else NULL
+    entry <- entry %||% list()
+    if (!is.null(entry) && !is.null(dat) && nrow(dat) > 0L) {
+      metadata <- c(
+        list(sample_id = entry$id, sample_name = entry$name, source_file = entry$path),
+        entry$sample_meta %||% list()
+      )
+      for (bucket_name in c("keywords", "keyword", "metadata")) {
+        bucket <- entry[[bucket_name]]
+        if (is.list(bucket)) metadata <- c(metadata, bucket)
+        else if (!is.null(bucket) && !is.null(names(bucket))) metadata <- c(metadata, as.list(bucket))
+      }
+      metadata <- metadata[!duplicated(names(metadata))]
+      keep <- vapply(metadata, function(value) {
+        length(value) == 1L && !is.list(value) && !is.null(value) && !is.na(value) && nzchar(trimws(as.character(value)))
+      }, logical(1))
+      metadata_names <- names(metadata)
+      metadata <- metadata[keep & !is.na(metadata_names) & nzchar(metadata_names)]
+      metadata <- metadata[setdiff(names(metadata), names(dat))]
+      if (length(metadata)) {
+        metadata_df <- as.data.frame(lapply(metadata, function(value) rep(as.character(value), nrow(dat))),
+          stringsAsFactors = FALSE, check.names = FALSE)
+        dat <- cbind(dat, metadata_df)
+      }
+    }
+    cm <- entry$channel_map %||% data.frame(channel = mk, marker = mk, stringsAsFactors = FALSE)
+    cm <- cm[cm$marker %in% mk, c("channel", "marker"), drop = FALSE]
+    missing <- setdiff(mk, cm$marker)
+    if (length(missing)) cm <- rbind(cm, data.frame(channel = missing, marker = missing, stringsAsFactors = FALSE))
+    cm <- cm[match(mk, cm$marker), , drop = FALSE]
+    list(data = dat, markers = mk, channel_map = cm,
+      transform_settings = entry$wsp_axis_transforms %||% list(),
+      badge = "FCS", label = "Root / all events", source_id = active_id,
+      selection = data.frame(sample_id = active_id %||% "", sample_name = entry$name %||% "Current sample",
+        gate_id = "root", gate_path = "root", events = nrow(dat), stringsAsFactors = FALSE))
   }
 
   analysis_validate_source <- function(src) {
@@ -249,9 +513,12 @@ make_shared_store <- function(session) {
     name
   }
 
-  analysis_create <- function(name, source = c("fcs", "batch"), notes = "") {
+  analysis_create <- function(name, source = c("fcs", "basket", "batch"), notes = "", population_ids = NULL) {
     name <- analysis_unique_name(name)
-    src <- analysis_source_data(match.arg(source))
+    # Agent note: Object input is the reviewed basket subset; export concatenation is a downstream operation.
+    source <- match.arg(source)
+    if (identical(source, "batch")) stop("Create analysis objects from reviewed populations or explicitly selected Root events.")
+    src <- analysis_source_data(source, population_ids = population_ids)
     markers <- analysis_validate_source(src)
     selected_markers <- flowjo_default_cluster_markers(markers)
     id <- analysis_make_id()
@@ -260,16 +527,20 @@ make_shared_store <- function(session) {
       name = name,
       source_badge = src$badge,
       source_label = src$label,
+      source_id = src$source_id,
       created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
       notes = notes %||% "",
       data = as.data.frame(src$data, stringsAsFactors = FALSE),
       markers = markers,
+      channel_map = src$channel_map,
+      transform_settings = src$transform_settings %||% list(),
       selected_markers = selected_markers,
       feature_settings = list(),
       cluster_settings = list(seed = 42L, neighbors = 15L, min_dist = 0.3, metric = "euclidean", scale = TRUE, xdim = 10L, ydim = 10L, rlen = 10L, k = 20L),
       runs = list(),
       active_run_id = NULL,
-      provenance = list(events = nrow(src$data), columns = ncol(src$data), markers = length(markers))
+      provenance = list(events = nrow(src$data), columns = ncol(src$data), markers = length(markers),
+        population_ids = population_ids, selection = src$selection %||% data.frame())
     )
     objs <- analysis_objects()
     objs[[id]] <- obj
@@ -287,6 +558,16 @@ make_shared_store <- function(session) {
   analysis_set_active <- function(id) {
     if (is.null(analysis_objects()[[id]])) return(invisible(FALSE))
     active_analysis_id(id)
+    invisible(TRUE)
+  }
+
+  analysis_set_selected_markers <- function(object_id = active_analysis_id(), markers) {
+    objs <- analysis_objects()
+    obj <- objs[[object_id]]
+    if (is.null(obj)) return(invisible(FALSE))
+    obj$selected_markers <- intersect(obj$markers %||% character(0), markers %||% character(0))
+    objs[[object_id]] <- obj
+    analysis_objects(objs)
     invisible(TRUE)
   }
 
@@ -333,6 +614,28 @@ make_shared_store <- function(session) {
     invisible(TRUE)
   }
 
+  analysis_set_run_colors <- function(object_id = active_analysis_id(), run_id, colors) {
+    objs <- analysis_objects()
+    obj <- objs[[object_id]]
+    if (is.null(obj) || is.null(obj$runs[[run_id]])) return(invisible(FALSE))
+    obj$runs[[run_id]]$cluster_colors <- colors
+    objs[[object_id]] <- obj
+    analysis_objects(objs)
+    invisible(TRUE)
+  }
+
+  analysis_set_run_visualization <- function(object_id = active_analysis_id(), run_id, visualization) {
+    objs <- analysis_objects()
+    obj <- objs[[object_id]]
+    if (is.null(obj) || is.null(obj$runs[[run_id]])) return(invisible(FALSE))
+    if (identical(obj$runs[[run_id]]$visualization %||% list(), visualization %||% list())) return(invisible(TRUE))
+    # Agent note: Visualization state belongs to the immutable result's run so switching runs restores its own view.
+    obj$runs[[run_id]]$visualization <- visualization %||% list()
+    objs[[object_id]] <- obj
+    analysis_objects(objs)
+    invisible(TRUE)
+  }
+
   analysis_export_bundle <- function(object_id = active_analysis_id(), file) {
     obj <- analysis_objects()[[object_id]]
     if (is.null(obj)) stop("Select an analysis object first.")
@@ -349,7 +652,9 @@ make_shared_store <- function(session) {
     old <- getwd()
     on.exit(setwd(old), add = TRUE)
     setwd(tmp)
-    utils::zip(zipfile = file, files = list.files(tmp, all.files = FALSE))
+    zip_file <- paste0(file, ".zip")
+    utils::zip(zipfile = zip_file, files = list.files(tmp, all.files = FALSE))
+    if (!file.rename(zip_file, file)) stop("Could not finalize the analysis bundle download.")
   }
 
   analysis_import_bundle <- function(path, name = NULL) {
@@ -413,7 +718,14 @@ make_shared_store <- function(session) {
           next
         }
         parent <- flowjo_gate_parent_membership(gates, sample_memberships, gate)
-        keep <- flowjo_gate_membership(gate_df, e$channel_map, gate, parent = parent)
+        # Agent note: FlowJo imports carry exact per-sample memberships; use them
+        # when available so WSP statistics are not changed by geometry re-evaluation.
+        imported_keep <- gate$wsp_memberships[[sid]] %||% NULL
+        keep <- if (!is.null(imported_keep) && length(imported_keep) == nrow(gate_df)) {
+          imported_keep
+        } else {
+          flowjo_gate_membership(gate_df, e$channel_map, gate, parent = parent)
+        }
         sample_memberships[[gid]] <- keep
         st <- flowjo_gate_stats(gate_df, keep, parent)
         stats_rows[[length(stats_rows) + 1]] <- data.frame(
@@ -616,17 +928,33 @@ make_shared_store <- function(session) {
 
   population_add <- function(sample_ids, gate_ids, set_name = "Population Set", label = NULL, volume_uL = NA_real_) {
     reg <- fcs_registry(); gates <- gate_tree(); stats <- gate_stats()
-    out <- population_items(); added <- 0L
+    out <- population_items(); added <- 0L; duplicates <- 0L; missing_stats <- 0L; invalid <- 0L
     for (sid in intersect(sample_ids, names(reg))) for (gid in intersect(gate_ids, names(gates))) {
-      if (!any(stats$sample_id == sid & stats$gate_id == gid, na.rm = TRUE)) next
+      stat_row <- stats[stats$sample_id == sid & stats$gate_id == gid, , drop = FALSE]
+      if (!nrow(stat_row)) {
+        # Agent note: Basket drops may arrive before background Workspace statistics;
+        # gate_recompute returns the requested rows but gate_stats only reflects the active sample.
+        computed <- gate_recompute(gid, sid)
+        stat_row <- computed[computed$sample_id == sid & computed$gate_id == gid, , drop = FALSE]
+        if (!nrow(stat_row)) {
+          missing_stats <- missing_stats + 1L
+          next
+        }
+      }
       dup <- vapply(out, function(x) identical(x$sample_id, sid) && identical(x$gate_id, gid) && identical(x$set_name, set_name), logical(1))
-      if (any(dup)) next
+      if (any(dup)) { duplicates <- duplicates + 1L; next }
+      default_label <- sub("^.*/", "", gates[[gid]]$name %||% gid)
       item <- list(id = flowjo_gate_id("pop"), sample_id = sid, gate_id = gid, set_name = set_name,
-        label = label %||% gates[[gid]]$name %||% gid, volume_uL = suppressWarnings(as.numeric(volume_uL %||% NA_real_)),
-        include = TRUE, created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+        label = label %||% default_label, volume_uL = suppressWarnings(as.numeric(volume_uL %||% NA_real_)),
+        include = TRUE, events = stat_row$cells[[1]], percent_parent = stat_row$percent_parent[[1]],
+        created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
       out[[item$id]] <- item; added <- added + 1L
     }
+    invalid <- (length(sample_ids) * length(gate_ids)) - added - duplicates - missing_stats
     population_items(out); population_clear_outputs(); invisible(added)
+    message("[workspace-basket] requested=", length(sample_ids) * length(gate_ids), " added=", added,
+      " duplicate=", duplicates, " missing_stats=", missing_stats, " invalid=", max(0L, invalid))
+    invisible(added)
   }
 
   population_update <- function(id, include = NULL, label = NULL, set_name = NULL, volume_uL = NULL) {
@@ -653,8 +981,8 @@ make_shared_store <- function(session) {
       st <- stats[stats$sample_id == x$sample_id & stats$gate_id == x$gate_id, , drop = FALSE]
       data.frame(id = x$id, include = isTRUE(x$include), population_set = x$set_name %||% "Population Set",
         label = x$label %||% gate$name %||% x$gate_id, sample_name = reg[[x$sample_id]]$name %||% x$sample_id,
-        gate_name = gate$name %||% x$gate_id, events = if (nrow(st)) st$cells[[1]] else 0L,
-        percent_parent = if (nrow(st)) st$percent_parent[[1]] else NA_real_,
+        gate_name = gate$name %||% x$gate_id, events = if (nrow(st)) st$cells[[1]] else x$events %||% 0L,
+        percent_parent = if (nrow(st)) st$percent_parent[[1]] else x$percent_parent %||% NA_real_,
         sync_status = if (!is.null(gate$sync_group_id)) "synced" else if (!is.null(gate$applied_sample_id)) "sample" else "global",
         volume_uL = suppressWarnings(as.numeric(x$volume_uL %||% NA_real_)), stringsAsFactors = FALSE)
     }))
@@ -670,6 +998,7 @@ make_shared_store <- function(session) {
       scale_settings     = scale_settings(),
       auto_scale_settings = auto_scale_settings(),
       feature_scale_setting = feature_scale_setting(),
+      compensation_library = compensation_library(),
       fcs_registry = fcs_registry(),
       active_fcs_id = active_fcs_id(),
       preprocess_result = preprocess_result(),
@@ -698,6 +1027,8 @@ make_shared_store <- function(session) {
     if (!is.null(obj$scale_settings))     scale_settings(obj$scale_settings)
     if (!is.null(obj$auto_scale_settings)) auto_scale_settings(obj$auto_scale_settings)
     if (!is.null(obj$feature_scale_setting)) feature_scale_setting(obj$feature_scale_setting)
+    if (!is.null(obj$compensation_library) && is.list(obj$compensation_library)) compensation_library(obj$compensation_library)
+    else compensation_library(list())
     if (!is.null(obj$preprocess_result)) preprocess_result(obj$preprocess_result)
     if (!is.null(obj$isolated_populations)) isolated_pops(obj$isolated_populations)
     if (!is.null(obj$concat_object)) concat_object(obj$concat_object)
@@ -715,11 +1046,32 @@ make_shared_store <- function(session) {
     if (!is.null(obj$gate_wsp_report)) gate_wsp_report(obj$gate_wsp_report)
     if (!is.null(obj$population_items)) population_items(obj$population_items)
     if (!is.null(obj$fcs_registry) && is.list(obj$fcs_registry)) {
-      fcs_registry(obj$fcs_registry)
-      if (!is.null(obj$active_fcs_id) && !is.null(obj$fcs_registry[[obj$active_fcs_id]])) {
-        set_active_from_entry(obj$fcs_registry[[obj$active_fcs_id]])
-      } else if (length(obj$fcs_registry) > 0) {
-        set_active_from_entry(obj$fcs_registry[[1]])
+      reg <- obj$fcs_registry
+      reg <- lapply(reg, function(entry) {
+        entry$.cache_revision <- paste0(format(Sys.time(), "%Y%m%d%H%M%OS6"), "-", sample.int(.Machine$integer.max, 1L))
+        entry
+      })
+      ids <- vapply(reg, function(e) e$id %||% "", character(1))
+      keep <- nzchar(ids)
+      reg <- reg[keep]
+      names(reg) <- ids[keep]
+      for (sample_id in names(reg)) {
+        entry <- reg[[sample_id]]
+        comp_id <- entry$compensation_id %||% ""
+        if (nzchar(comp_id) && !is.null(compensation_library()[[comp_id]])) {
+          entry$spillover <- compensation_library()[[comp_id]]$matrix
+          entry$compensation_name <- compensation_library()[[comp_id]]$name %||% comp_id
+          entry$compensation_channels <- compensation_library()[[comp_id]]$channels %||% colnames(entry$spillover)
+        } else {
+          entry <- compensation_register_entry(entry)
+        }
+        reg[[sample_id]] <- entry
+      }
+      fcs_registry(reg)
+      if (!is.null(obj$active_fcs_id) && !is.null(reg[[obj$active_fcs_id]])) {
+        set_active_from_entry(reg[[obj$active_fcs_id]])
+      } else if (length(reg) > 0) {
+        set_active_from_entry(reg[[1]])
       }
     }
   }
@@ -730,6 +1082,16 @@ make_shared_store <- function(session) {
     choices = choices,
     axis_pairs = axis_pairs_val,
     transforms = list(settings = transform_settings, scales = scale_settings, auto_scales = auto_scale_settings, feature_scale = feature_scale_setting),
+    compensation = list(
+      library = compensation_library,
+      matrix = function(id) compensation_library()[[id]]$matrix %||% NULL,
+      add = compensation_register,
+      update = compensation_update,
+      reset = compensation_reset,
+      assign = compensation_assign,
+      remove = compensation_remove,
+      rebuild = compensation_rebuild
+    ),
     flowsom = list(df = flowsom_df, order = flowsom_order),
     umap = list(df = umap_fsom_df, params = umap_fsom_params),
     pipeline = list(
@@ -748,8 +1110,11 @@ make_shared_store <- function(session) {
       create = analysis_create,
       delete = analysis_delete,
       set_active = analysis_set_active,
+      set_selected_markers = analysis_set_selected_markers,
       add_run = analysis_add_run,
       set_active_run = analysis_set_active_run,
+      set_run_colors = analysis_set_run_colors,
+      set_run_visualization = analysis_set_run_visualization,
       export_bundle = analysis_export_bundle,
       import_bundle = analysis_import_bundle
     ),
@@ -793,6 +1158,14 @@ make_shared_store <- function(session) {
       table = fcs_table
     ),
     params = params,
+    ui = list(
+      plot_preload_request = plot_preload_request,
+      request_plot_preload = request_plot_preload,
+      nav_route_request = nav_route_request,
+      request_nav_route = request_nav_route,
+      gating_sample_request = gating_sample_request,
+      request_gating_sample = request_gating_sample
+    ),
     export_state = export_state,
     import_state = import_state
   )

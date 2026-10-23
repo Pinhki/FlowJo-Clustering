@@ -13,6 +13,7 @@ launch_mac.app/
 package_libraries/
 python_envs/
 run_log.txt
+local_settings/
 
 # Common temp/cache files
 *.tmp

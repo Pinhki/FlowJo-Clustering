@@ -39,22 +39,22 @@ gating_page_ui <- function(id) {
         )
       ),
       column(9,
-        card_page_card("Preview",
+        card_page_card(tagList(span("Preview"), div(class = "gate-preview-tool-slot", uiOutput(ns("gate_toolbar")))),
           div(
             id = ns("preview_card"),
             class = "gate-preview-card",
             tabindex = "0",
             div(class = "gate-preview-head",
-              div(class = "gate-preview-path-slot", uiOutput(ns("gate_path_toolbar"))),
-              div(class = "gate-preview-tool-slot", uiOutput(ns("gate_toolbar")))
+              div(class = "gate-preview-path-slot", uiOutput(ns("gate_path_toolbar")))
             ),
             uiOutput(ns("preview_gate_nav")),
             uiOutput(ns("preview_sample_nav")),
             uiOutput(ns("preview_plots"))
           ),
-          div(class = "gate-node-meta", "Canvas preview: click a plot to activate it, use arrows or keyboard arrows to move through gates and samples, double-click a saved gate to enter its population.")
+          div(class = "gate-node-meta gate-preview-note", "Canvas preview: click a plot to activate it, use arrows or keyboard arrows to move through gates and samples, double-click a saved gate to enter its population.")
         ),
-        card_page_card("Population Counts", DT::dataTableOutput(ns("count_table")))
+        card_page_card(tagList(span("Population Counts"), div(class = "gate-count-header-tools")),
+          DT::dataTableOutput(ns("count_table")), class = "gate-count-card")
       )
     ),
     uiOutput(ns("gate_preview_windows"))
@@ -63,23 +63,261 @@ gating_page_ui <- function(id) {
 
 gating_page_server <- function(id, shared) {
   moduleServer(id, function(input, output, session) {
+    active_sample_override <- reactiveVal(NULL)
     active_entry <- reactive({
-      sid <- input$sample_id %||% shared$fcs$active_id()
+      # Agent note: Workspace navigation updates shared sample + gate atomically; a stale picker input must not reject that gate during the first Gating render.
+      sid <- active_sample_override() %||% shared$fcs$active_id() %||% input$sample_id
       reg <- shared$fcs$registry()
       if (is.null(sid) || is.null(reg[[sid]])) return(NULL)
       reg[[sid]]
     })
+
+    observeEvent(input$sample_id, {
+      sid <- input$sample_id
+      if (!is.null(shared$fcs$registry()[[sid]])) shared$fcs$set_active(sid)
+      if (identical(active_sample_override(), sid)) active_sample_override(NULL)
+    }, ignoreInit = TRUE)
     navigator_selected_gates <- reactiveVal(character())
     gate_preview_windows <- reactiveVal(list())
     pending_gate_drop <- reactiveVal(NULL)
     canvas_selected_gate <- reactiveVal(NULL)
     active_plot <- reactiveVal("left")
+    plot_display_modes <- reactiveValues(left = "pseudocolor", right = "pseudocolor")
+    right_axis_template_gate_id <- reactiveVal(NULL)
     plot_axes <- reactiveValues(left = list(x = NULL, y = NULL), right = list(x = NULL, y = NULL))
     displayed_plot_axes <- reactiveValues(left = list(x = NULL, y = NULL), right = list(x = NULL, y = NULL))
     view_axes <- reactiveVal(list())
     skip_next_gate_payload <- reactiveVal(FALSE)
-    active_stats_cache <- new.env(parent = emptyenv())
+    collapsed_count_gates <- reactiveVal(character())
+    count_color_target <- reactiveVal(NULL)
+    count_color_picker <- motion_color_picker_server("count_gate_color_picker")
+
+    # Agent note: Population Counts keeps the full gate tree in shared state;
+    # this local set only controls which descendants are visible in the table.
+    observeEvent(input$count_gate_toggle, {
+      msg <- input$count_gate_toggle
+      gid <- if (is.list(msg)) as.character(msg$gate_id %||% "") else as.character(msg %||% "")
+      if (!length(gid) || !nzchar(gid[[1]])) return()
+      gid <- gid[[1]]
+      collapsed <- collapsed_count_gates()
+      collapsed_count_gates(if (gid %in% collapsed) setdiff(collapsed, gid) else unique(c(collapsed, gid)))
+    }, ignoreInit = TRUE)
+
+    observeEvent(input$count_gate_color_open, {
+      msg <- input$count_gate_color_open
+      gid <- if (is.list(msg)) as.character(msg$gate_id %||% "") else as.character(msg %||% "")
+      if (!length(gid) || !nzchar(gid[[1]])) return()
+      gid <- gid[[1]]
+      gates <- shared$gating$gates()
+      gate <- gates[[gid]]
+      if (is.null(gate)) return()
+      gate_index <- match(gid, names(gates))
+      if (is.na(gate_index)) gate_index <- 1L
+      count_color_target(gid)
+      showModal(modalDialog(
+        title = sprintf("Color for %s", gate$name %||% gid),
+        motion_color_picker_ui(
+          session$ns("count_gate_color_picker"),
+          mode = "single",
+          initial_hex = flowjo_gate_color(gate, gate_index)
+        ),
+        footer = tagList(
+          modalButton("Cancel"),
+          actionButton(session$ns("count_gate_color_apply"), "Apply", class = "btn btn-primary")
+        ),
+        easyClose = TRUE
+      ))
+    }, ignoreInit = TRUE)
+
+    observeEvent(input$count_gate_color_apply, {
+      gid <- count_color_target()
+      payload <- count_color_picker()
+      col <- toupper(trimws(as.character(payload$hex %||% "")))
+      gates <- shared$gating$gates()
+      if (!is.null(gid) && nzchar(gid) && !is.null(gates[[gid]]) && grepl("^#[0-9A-F]{6}$", col)) {
+        gates[[gid]]$color <- col
+        gates <- mark_gate_modified_or_sync(gates, gid)
+        shared$gating$gates(gates)
+      }
+      count_color_target(NULL)
+      removeModal()
+    }, ignoreInit = TRUE)
+
+    observeEvent(shared$ui$nav_route_request(), {
+      route <- shared$ui$nav_route_request()
+      if (!identical(route$tab %||% NULL, "gating_tab")) return()
+      gid <- isolate(shared$gating$active_gate_id())
+      gates <- isolate(shared$gating$gates())
+      if (is.null(gid) || is.null(gates[[gid]])) return()
+      entry <- isolate(active_entry())
+      next_gid <- if (is.null(entry)) NULL else right_axis_source_gate_id(gates, gid, entry)
+      # Agent note: Workspace opens follow the normal two-plot policy: show the
+      # requested population on the left with its next applicable gate selected;
+      # leaf populations have no next gate and therefore open on the right.
+      if (!is.null(next_gid)) {
+        shared$gating$active_gate_id(next_gid)
+        canvas_selected_gate(next_gid)
+        active_plot("left")
+      } else {
+        canvas_selected_gate(gid)
+        active_plot("right")
+      }
+    }, ignoreInit = TRUE)
+    membership_cache <- new.env(parent = emptyenv())
+    membership_cache_order <- character()
+    preview_full_data_cache <- new.env(parent = emptyenv())
+    canvas_point_payload_keys <- new.env(parent = emptyenv())
+    preview_cache_tick <- reactiveVal(0L)
+    preload_state <- reactiveVal(list(generation = 0L, signature = NULL, queue = list(), total = 0L, done = 0L, failed = 0L, failed_keys = character(), protected_keys = character()))
+    gating_preview_ready <- reactiveVal(FALSE)
+    foreground_preview_scheduled <- FALSE
+    foreground_preview_running <- FALSE
+    foreground_preview_overlay_visible <- FALSE
+    foreground_preview_ready_token <- NULL
+    foreground_preview_generation <- 0L
+    preload_progress_handle <- NULL
     label_pos_cache <- new.env(parent = emptyenv())
+
+    axis_debug <- function(...) {
+      if (isTRUE(getOption("flowjo.debug.axis", FALSE))) {
+        message(sprintf(...))
+      }
+    }
+
+    plot_event_limit <- function() {
+      if (!isTRUE(shared$params$plot_event_limit_enabled())) return(Inf)
+      max(1L, as.integer(shared$params$plot_event_limit() %||% 75000L))
+    }
+
+    plot_sample <- function(df) {
+      lim <- plot_event_limit()
+      if (is.finite(lim) && nrow(df) > lim) {
+        # Stable thinning keeps an evicted/rebuilt context visually identical.
+        idx <- unique(pmax(1L, pmin(nrow(df), round(seq(1, nrow(df), length.out = lim)))))
+        df[idx, , drop = FALSE]
+      } else df
+    }
+
+    gate_cache_ancestry <- function(gates, gate_id) {
+      out <- list()
+      gid <- gate_id
+      while (!is.null(gid) && !identical(gid, "root") && !is.null(gates[[gid]])) {
+        gate <- gates[[gid]]
+        out[[length(out) + 1L]] <- gate[c("id", "parent_id", "type", "x_channel", "y_channel", "geometry", "applied_sample_id", "sync_group_id", "group_id")]
+        gid <- gate$parent_id
+      }
+      rev(out)
+    }
+
+    gate_cache_population_id <- function(gates, gate_id) {
+      gate <- gates[[gate_id %||% ""]]
+      if (is.null(gate) || is.null(gate$parent_id) || identical(gate$parent_id, "root")) NULL else gate$parent_id
+    }
+
+    preview_cache_get <- function(key) {
+      if (!isTRUE(shared$params$plot_cache_enabled())) return(NULL)
+      item <- preview_full_data_cache[[key]]
+      if (is.null(item)) return(NULL)
+      item$used <- as.integer(isolate(preview_cache_tick())) + 1L
+      preview_cache_tick(item$used)
+      preview_full_data_cache[[key]] <- item
+      item$value
+    }
+
+    preview_cache_set <- function(key, value, protected_keys = character()) {
+      if (!isTRUE(shared$params$plot_cache_enabled())) return(value)
+      tick <- as.integer(isolate(preview_cache_tick())) + 1L
+      preview_cache_tick(tick)
+      preview_full_data_cache[[key]] <- list(value = value, used = tick)
+      keys <- ls(preview_full_data_cache, all.names = TRUE)
+      max_items <- max(1L, as.integer(shared$params$plot_cache_max_contexts() %||% 50L))
+      if (length(keys) > max_items) {
+        protected_keys <- unique(c(protected_keys, isolate(preload_state())$protected_keys %||% character()))
+        candidates <- setdiff(keys, protected_keys)
+        remove_n <- min(length(candidates), length(keys) - max_items)
+        if (remove_n > 0L) {
+          used <- vapply(candidates, function(k) preview_full_data_cache[[k]]$used %||% 0L, integer(1))
+          rm(list = candidates[order(used)][seq_len(remove_n)], envir = preview_full_data_cache)
+        }
+      }
+      value
+    }
+
+    preview_cache_key <- function(entry, gates, gate_id, x_channel, y_channel, settings, cache_mode = NULL) {
+      cache_mode <- cache_mode %||% shared$params$plot_cache_mode()
+      digest::digest(list(
+        sample = entry$id,
+        revision = entry$.cache_revision %||% digest::digest(list(dim(entry$df), names(entry$df), entry$loaded_at %||% NULL, entry$path %||% NULL), algo = "xxhash64"),
+        population = gate_cache_ancestry(gates, gate_cache_population_id(gates, gate_id)),
+        x = x_channel,
+        y = y_channel,
+        settings = settings,
+        cache_mode = cache_mode,
+        limit_enabled = if (identical(cache_mode, "full")) FALSE else isTRUE(shared$params$plot_event_limit_enabled()),
+        limit = if (identical(cache_mode, "full")) Inf else plot_event_limit()
+      ), algo = "xxhash64")
+    }
+
+    preview_transform_settings <- function(entry, x_channel, y_channel) {
+      settings <- effective_transform_settings(entry, x_channel, y_channel, list())
+      cols <- c(
+        x_channel, y_channel,
+        flowjo_channel_to_marker(entry$channel_map, x_channel),
+        flowjo_channel_to_marker(entry$channel_map, y_channel)
+      )
+      settings[intersect(names(settings), unique(cols[!is.na(cols) & nzchar(cols)]))]
+    }
+
+    preview_data_for_context <- function(entry, gate_id, x_channel, y_channel, gates = shared$gating$gates()) {
+      req(entry, x_channel, y_channel)
+      x_col <- flowjo_channel_to_marker(entry$channel_map, x_channel)
+      y_col <- flowjo_channel_to_marker(entry$channel_map, y_channel)
+      req(x_col, y_col)
+      settings <- preview_transform_settings(entry, x_channel, y_channel)
+      cache_mode <- shared$params$plot_cache_mode()
+      key <- preview_cache_key(entry, gates, gate_id, x_channel, y_channel, settings, cache_mode)
+      cached <- preview_cache_get(key)
+      if (is.null(cached)) {
+        df <- flowjo_transform_data(entry$df, settings)
+        keep <- is.finite(df[[x_col]]) & is.finite(df[[y_col]])
+        cache_population_id <- gate_cache_population_id(gates, gate_id)
+        parent <- cached_gate_membership(entry, gates, cache_population_id)
+        if (!is.null(parent)) keep <- keep & parent
+        row_index <- which(keep)
+        cached <- list(df = df[keep, , drop = FALSE], row_index = row_index, x_col = x_col, y_col = y_col, entry = entry, x_channel = x_channel, y_channel = y_channel, full_cache = identical(cache_mode, "full"))
+        # Agent note: Cache the shared transformed parent population; sibling geometry is applied below so sibling selection reuses data without showing the wrong population.
+        preview_cache_set(key, cached)
+      }
+      membership <- cached_gate_membership(entry, gates, gate_id)
+      out <- cached
+      if (!is.null(membership)) {
+        keep <- membership[cached$row_index]
+        keep[is.na(keep)] <- FALSE
+        out$df <- cached$df[keep, , drop = FALSE]
+      }
+      if (!identical(cache_mode, "full")) out$df <- plot_sample(out$df)
+      out
+    }
+
+    preview_context_is_cached <- function(entry, gate_id, x_channel, y_channel, gates = shared$gating$gates()) {
+      if (!isTRUE(shared$params$plot_cache_enabled())) return(FALSE)
+      settings <- preview_transform_settings(entry, x_channel, y_channel)
+      key <- preview_cache_key(entry, gates, gate_id, x_channel, y_channel, settings, shared$params$plot_cache_mode())
+      !is.null(preview_full_data_cache[[key]])
+    }
+
+    preview_context_key <- function(ctx, gates) {
+      if (identical(ctx$type %||% "plot", "counts")) {
+        return(count_context_key(ctx$entry, gates))
+      }
+      settings <- preview_transform_settings(ctx$entry, ctx$x, ctx$y)
+      preview_cache_key(ctx$entry, gates, ctx$gate_id, ctx$x, ctx$y, settings, shared$params$plot_cache_mode())
+    }
+
+    preload_context_is_cached <- function(ctx, gates) {
+      if (identical(ctx$type %||% "plot", "counts")) return(count_context_is_cached(ctx$entry, gates))
+      preview_context_is_cached(ctx$entry, ctx$gate_id, ctx$x, ctx$y, gates)
+    }
 
     active_sample_id <- reactive({
       e <- active_entry()
@@ -105,12 +343,25 @@ gating_page_server <- function(id, shared) {
       if (identical(plot, "left")) flowjo_gate_parent_id(gates, active_id) else active_id
     }
 
+    displayed_population_gate_id <- function(gates = NULL) {
+      if (is.null(gates)) gates <- shared$gating$gates()
+      plot_focus_gate_id(active_plot(), gates)
+    }
+
+    active_plot_context <- reactive({
+      gates <- shared$gating$gates()
+      plot <- active_plot()
+      gid <- plot_focus_gate_id(plot, gates)
+      list(plot = plot, gate_id = gid, gate = gates[[gid %||% ""]])
+    })
+
     view_axis_key <- function(plot, focus_id = NULL) {
       paste(active_sample_id() %||% "sample", plot %||% "plot", focus_id %||% "root", sep = "::")
     }
 
     reset_right_axis_override <- function(gid) {
       if (is.null(gid)) return()
+      right_axis_template_gate_id(NULL)
       axes <- view_axes()
       axes[[view_axis_key("right", gid)]] <- NULL
       view_axes(axes)
@@ -149,20 +400,53 @@ gating_page_server <- function(id, shared) {
       gates <- shared$gating$gates()
       gid <- focus_gate_id %||% plot_focus_gate_id(plot, gates)
       gate <- if (!is.null(gid) && !identical(gid, "root")) gates[[gid]] else NULL
+      source <- "view_axes"
       pair <- view_axes()[[view_axis_key(plot, gid)]]
       if (is.null(pair) && identical(plot, "right") && !is.null(gate)) {
         axis_gid <- right_axis_source_gate_id(gates, gid, e) %||% gid
         axis_gate <- gates[[axis_gid]]
-        if (!is.null(axis_gate)) pair <- list(x = axis_gate$x_channel, y = axis_gate$y_channel)
+        if (!is.null(axis_gate)) {
+          pair <- list(x = axis_gate$x_channel, y = axis_gate$y_channel)
+          source <- sprintf("right_axis_source:%s", axis_gid)
+        }
       }
-      pair <- pair %||% plot_axes[[plot]] %||% if (!is.null(gate)) list(x = gate$x_channel, y = gate$y_channel) else list()
+      displayed_pair <- displayed_plot_axes[[plot]]
+      if (is.null(pair) && !is.null(plot_axes[[plot]])) {
+        pair <- plot_axes[[plot]]
+        source <- "plot_axes"
+      }
+      if (is.null(pair) && !is.null(displayed_pair)) {
+        pair <- displayed_pair
+        source <- "displayed_plot_axes"
+      }
+      if (is.null(pair) && !is.null(gate)) {
+        pair <- list(x = gate$x_channel, y = gate$y_channel)
+        source <- "gate"
+      }
       if ((is.null(pair$x) || is.null(pair$y)) && is.null(gate)) {
         seed_id <- first_applicable_gate_id(gates, names(gates), e)
         seed_gate <- if (!is.null(seed_id)) gates[[seed_id]] else NULL
-        if (!is.null(seed_gate)) pair <- list(x = seed_gate$x_channel, y = seed_gate$y_channel)
+        if (!is.null(seed_gate)) {
+          pair <- list(x = seed_gate$x_channel, y = seed_gate$y_channel)
+          source <- sprintf("seed_gate:%s", seed_id)
+        }
       }
       defaults <- default_axis_pair(e)
-      list(x = pair$x %||% defaults$x, y = pair$y %||% defaults$y)
+      out <- list(x = pair$x %||% defaults$x, y = pair$y %||% defaults$y)
+      if (is.null(pair$x) || is.null(pair$y)) source <- paste(source, "+defaults")
+      axis_debug("[gating-axis] pair plot=%s gid=%s source=%s active=%s out=%s/%s displayed=%s/%s plot_axes=%s/%s",
+        plot %||% "<null>",
+        gid %||% "<root>",
+        source,
+        isolate(active_plot()) %||% "<null>",
+        out$x %||% "<null>",
+        out$y %||% "<null>",
+        displayed_pair$x %||% "<null>",
+        displayed_pair$y %||% "<null>",
+        plot_axes[[plot]]$x %||% "<null>",
+        plot_axes[[plot]]$y %||% "<null>"
+      )
+      out
     }
 
     gate_path <- function(gates, gate_id) {
@@ -182,8 +466,101 @@ gating_page_server <- function(id, shared) {
 
     first_gate_id <- function(gates = NULL) {
       if (is.null(gates)) gates <- shared$gating$gates()
+      e <- active_entry()
       ids <- names(gates)
+      if (!is.null(e)) {
+        gid <- first_applicable_gate_id(gates, ids, e)
+        if (!is.null(gid)) return(gid)
+      }
       if (length(ids)) ids[[1]] else NULL
+    }
+
+    synced_nav_gate_id <- function(gates, gate_id) {
+      gid <- gate_id
+      while (!is.null(gid) && !identical(gid, "root") && !is.null(gates[[gid]])) {
+        gate <- gates[[gid]]
+        if (!is.null(gate$sync_group_id %||% gate$group_id)) return(gid)
+        gid <- gate$parent_id
+      }
+      gate_id
+    }
+
+    sample_lineage_peer_id <- function(gates, gate_id, sample_id) {
+      gate <- gates[[gate_id]]
+      if (is.null(gate) || is.null(sample_id)) return(NULL)
+      lineage_id <- flowjo_gate_lineage_id(gate)
+      hits <- names(gates)[vapply(gates, function(candidate) {
+        identical(flowjo_gate_lineage_id(candidate), lineage_id) &&
+          identical(candidate$applied_sample_id, sample_id)
+      }, logical(1))]
+      if (!length(hits)) return(NULL)
+      group_id <- gate$sync_group_id %||% gate$group_id
+      if (!is.null(group_id)) {
+        same_group <- hits[vapply(hits, function(id) {
+          identical(gates[[id]]$sync_group_id %||% gates[[id]]$group_id, group_id)
+        }, logical(1))]
+        if (length(same_group)) return(same_group[[1]])
+      }
+      # Agent note: Unsyncing changes ownership, not population identity; sample navigation must still follow the preserved lineage.
+      hits[[1]]
+    }
+
+    sample_gate_target_id <- function(gates, gate_id, sample_id) {
+      gid <- gate_id
+      while (!is.null(gid) && !identical(gid, "root") && !is.null(gates[[gid]])) {
+        peer_id <- sample_lineage_peer_id(gates, gid, sample_id)
+        if (!is.null(peer_id)) return(peer_id)
+        gid <- gates[[gid]]$parent_id
+      }
+      NULL
+    }
+
+    sample_gate_switch_target <- function(gates, gate_id, sample_id) {
+      if (is.null(gate_id) || is.null(gates[[gate_id]])) return(NULL)
+      exact_id <- sample_lineage_peer_id(gates, gate_id, sample_id)
+      if (!is.null(exact_id)) return(list(gate_id = exact_id, template_id = NULL))
+      parent_id <- gates[[gate_id]]$parent_id
+      parent_peer_id <- sample_gate_target_id(gates, parent_id, sample_id)
+      if (is.null(parent_peer_id)) return(NULL)
+      source <- gates[[gate_id]]
+      child_hits <- flowjo_gate_children(gates, parent_peer_id)
+      child_hits <- child_hits[vapply(child_hits, function(id) {
+        child <- gates[[id]]
+        identical(child$name %||% "", source$name %||% "") &&
+          identical(child$type %||% "rectangle", source$type %||% "rectangle") &&
+          identical(child$x_channel %||% "", source$x_channel %||% "") &&
+          identical(child$y_channel %||% "", source$y_channel %||% "")
+      }, logical(1))]
+      if (length(child_hits)) return(list(gate_id = child_hits[[1]], template_id = NULL))
+      list(gate_id = parent_peer_id, template_id = gate_id)
+    }
+
+    navigator_sample_ids <- function() {
+      reg_ids <- names(shared$fcs$registry())
+      groups <- shared$gating$groups()
+      grouped_ids <- unlist(lapply(groups, function(group) group$sample_ids %||% character()), use.names = FALSE)
+      grouped_ids <- grouped_ids[grouped_ids %in% reg_ids]
+      # Agent note: This is the right-panel visual order and must remain the single source for every sample arrow.
+      unique(c(grouped_ids, setdiff(reg_ids, grouped_ids)))
+    }
+
+    eligible_navigator_sample_ids <- function(gates, gate_id) {
+      ids <- navigator_sample_ids()
+      if (is.null(gate_id) || is.null(gates[[gate_id]])) return(character())
+      ids[vapply(ids, function(id) !is.null(sample_gate_switch_target(gates, gate_id, id)), logical(1))]
+    }
+
+    prev_next_preview_sample <- function(gates, gate_id, sample_id, direction = 1L) {
+      visible_ids <- navigator_sample_ids()
+      eligible_ids <- eligible_navigator_sample_ids(gates, gate_id)
+      if (!length(eligible_ids)) return(NULL)
+      current_pos <- match(sample_id, visible_ids)
+      eligible_pos <- match(eligible_ids, visible_ids)
+      if (is.na(current_pos)) current_pos <- if (direction > 0) 0L else length(visible_ids) + 1L
+      candidates <- if (direction > 0) which(eligible_pos > current_pos) else which(eligible_pos < current_pos)
+      if (!length(candidates)) return(NULL)
+      pick <- if (direction > 0) candidates[[1]] else candidates[[length(candidates)]]
+      eligible_ids[[pick]]
     }
 
     clean_gate_marker <- function(entry, channel) {
@@ -291,36 +668,87 @@ gating_page_server <- function(id, shared) {
       isTRUE(flowjo_gate_applicability(reg[[sample_id]], gates[[gate_id]], gates)$ok)
     }
 
-    gate_stats_key <- function(e, gates) {
-      gate_bits <- vapply(gates, function(gate) {
-        paste(
-          gate$id %||% "",
-          gate$name %||% "",
-          gate$type %||% "",
-          gate$parent_id %||% "",
-          gate$x_channel %||% "",
-          gate$y_channel %||% "",
-          gate$applied_sample_id %||% "",
-          gate$sync_group_id %||% "",
-          gate$group_id %||% "",
-          gate$group_state %||% "",
-          gate$color %||% "",
-          gate$group_color %||% "",
-          paste(unlist(gate$geometry %||% list(), use.names = FALSE), collapse = ","),
-          sep = "|"
-        )
-      }, character(1))
-      paste(c(e$id %||% "", gate_bits), collapse = "\n")
+    sample_membership_cache_key <- function(e) {
+      digest::digest(list(
+        id = e$id,
+        revision = e$.cache_revision %||% list(dim(e$df), names(e$df), e$loaded_at %||% NULL, e$path %||% NULL),
+        channel_map = e$channel_map
+      ), algo = "xxhash64")
     }
 
-    active_sample_gate_stats <- function() {
-      e <- active_entry()
-      gates <- shared$gating$gates()
+    count_context_key <- function(e, gates) {
+      gate_bits <- lapply(gates, function(gate) gate[c("id", "parent_id", "type", "x_channel", "y_channel", "geometry", "applied_sample_id", "sync_group_id", "group_id")])
+      paste0("counts:", digest::digest(list(sample_membership_cache_key(e), gate_bits), algo = "xxhash64"))
+    }
+
+    count_context_is_cached <- function(e, gates) {
+      bucket <- membership_cache[[sample_membership_cache_key(e)]]
+      !is.null(bucket) && identical(bucket[[".count_context_key"]], count_context_key(e, gates))
+    }
+
+    membership_bucket <- function(e) {
+      key <- sample_membership_cache_key(e)
+      bucket <- membership_cache[[key]]
+      if (is.null(bucket)) {
+        bucket <- new.env(parent = emptyenv())
+        membership_cache[[key]] <- bucket
+      }
+      membership_cache_order <<- unique(c(setdiff(membership_cache_order, key), key))
+      # Agent note: Keep the selected preload scope resident; otherwise large workspaces
+      # evict completed memberships and repeatedly rebuild the same count contexts.
+      loaded_samples <- length(isolate(shared$fcs$registry()) %||% list())
+      max_samples <- max(2L, loaded_samples, as.integer(isolate(shared$params$plot_cache_max_contexts()) %||% 50L))
+      if (length(membership_cache_order) > max_samples) {
+        drop <- head(membership_cache_order, length(membership_cache_order) - max_samples)
+        rm(list = intersect(drop, ls(membership_cache, all.names = TRUE)), envir = membership_cache)
+        membership_cache_order <<- setdiff(membership_cache_order, drop)
+      }
+      bucket
+    }
+
+    cached_gate_membership <- function(e, gates, gate_id) {
+      if (is.null(gate_id) || identical(gate_id, "root") || is.null(gates[[gate_id]])) return(NULL)
+      gate <- gates[[gate_id]]
+      parent_id <- gate$parent_id %||% "root"
+      parent <- cached_gate_membership(e, gates, parent_id)
+      parent_signature <- if (identical(parent_id, "root")) "root" else attr(parent, "cache_signature") %||% "missing"
+      # Agent note: Presentation fields stay out of this signature so renaming or recoloring a gate never recomputes event membership.
+      signature <- digest::digest(list(
+        parent = parent_signature,
+        id = gate$id,
+        parent_id = parent_id,
+        type = gate$type,
+        x_channel = gate$x_channel,
+        y_channel = gate$y_channel,
+        geometry = gate$geometry,
+        applied_sample_id = gate$applied_sample_id,
+        sync_group_id = gate$sync_group_id,
+        group_id = gate$group_id
+      ), algo = "xxhash64")
+      bucket <- membership_bucket(e)
+      cached <- bucket[[gate_id]]
+      if (!is.null(cached) && identical(cached$signature, signature)) return(cached$keep)
+      imported_keep <- gate$wsp_memberships[[e$id]] %||% NULL
+      keep <- if (!is.null(imported_keep) && length(imported_keep) == nrow(e$df)) {
+        # Agent note: FlowJo carries exact event membership per sample; reuse it
+        # so the first Gating render does not re-evaluate every imported polygon.
+        imported_keep
+      } else {
+        flowjo_gate_membership(e$df, e$channel_map, gate, parent = parent)
+      }
+      attr(keep, "cache_signature") <- signature
+      bucket[[gate_id]] <- list(signature = signature, keep = keep, stats = flowjo_gate_stats(e$df, keep, parent))
+      keep
+    }
+
+    cached_gate_stats <- function(e, gates, gate_id) {
+      keep <- cached_gate_membership(e, gates, gate_id)
+      if (is.null(keep)) return(NULL)
+      membership_bucket(e)[[gate_id]]$stats
+    }
+
+    active_sample_gate_stats <- function(e = active_entry(), gates = shared$gating$gates()) {
       if (is.null(e) || !length(gates)) return(data.frame())
-      key <- gate_stats_key(e, gates)
-      if (identical(active_stats_cache$key %||% NULL, key)) return(active_stats_cache$value)
-      gate_df <- e$df
-      memberships <- list()
       rows <- list()
       visible <- list()
       collect <- function(parent_id = "root", depth = 0L) {
@@ -336,10 +764,7 @@ gating_page_server <- function(id, shared) {
       for (row in visible) {
         gid <- row$id
         gate <- gates[[gid]]
-        parent <- flowjo_gate_parent_membership(gates, memberships, gate)
-        keep <- flowjo_gate_membership(gate_df, e$channel_map, gate, parent = parent)
-        memberships[[gid]] <- keep
-        st <- flowjo_gate_stats(gate_df, keep, parent)
+        st <- cached_gate_stats(e, gates, gid)
         rows[[length(rows) + 1L]] <- data.frame(
           sample_id = e$id,
           sample_name = e$name %||% e$id,
@@ -356,12 +781,15 @@ gating_page_server <- function(id, shared) {
         )
       }
       out <- if (length(rows)) do.call(rbind, rows) else data.frame()
-      active_stats_cache$key <- key
-      active_stats_cache$value <- out
+      bucket <- membership_bucket(e)
+      bucket[[".count_context_key"]] <- count_context_key(e, gates)
       out
     }
 
-    active_sample_stats <- reactive(active_sample_gate_stats())
+    active_sample_stats <- reactive({
+      # Agent note: Counts depend on sample/gate data, not canvas visibility. Tab readiness must not clear or invalidate cached table results.
+      active_sample_gate_stats()
+    })
 
     gate_subtree_ids <- function(gates, gate_ids) {
       out <- character()
@@ -530,9 +958,8 @@ gating_page_server <- function(id, shared) {
     })
 
     output$active_parent <- renderUI({
-      gates <- shared$gating$gates()
-      gid <- shared$gating$active_gate_id()
-      name <- if (!is.null(gid) && !is.null(gates[[gid]])) gates[[gid]]$name else "Root"
+      context <- active_plot_context()
+      name <- context$gate$name %||% "Root"
       div(class = "gate-active-parent",
         span("Viewing population / next gate parent"),
         strong(name),
@@ -552,15 +979,36 @@ gating_page_server <- function(id, shared) {
       group <- if (!is.null(group_id)) groups[[group_id]] else NULL
       if (identical(state, "synced")) {
         return(div(class = "gate-sync-controls",
-          div(class = "gate-state-badge synced", "Synced group gate"),
-          div(class = "gate-node-meta", sprintf("Managed in Workspace%s. Edits here update synced copies.", if (!is.null(group)) paste0(" · ", group$name %||% group$id) else "")),
-          actionButton(session$ns("unsync_sample_gate"), "Unsync this sample", class = "btn btn-sm btn-outline-secondary")
+          tags$button(
+            id = session$ns("unsync_sample_gate"),
+            type = "button",
+            class = "gate-sync-toggle is-on action-button",
+            role = "switch",
+            `aria-checked` = "true",
+            span(class = "gate-sync-toggle-copy",
+              span(class = "gate-sync-toggle-title", "Gate sync is on"),
+              span(class = "gate-sync-toggle-note", "Edits to this gate are shared with the linked group samples.")
+            ),
+            span(class = "gate-sync-toggle-action",
+              span(class = "gate-sync-switch", `aria-hidden` = "true"),
+              span(class = "gate-sync-action-text", "Unsync this sample")
+            )
+          )
         ))
       }
       if (identical(state, "sample-modified")) {
         return(div(class = "gate-sync-controls",
-          div(class = "gate-state-badge sample-modified", "Sample modified"),
-          div(class = "gate-node-meta", sprintf("This gate no longer follows%s. Use Workspace to reset or sync.", if (!is.null(group)) paste0(" ", group$name %||% group$id) else " the group"))
+          div(class = "gate-sync-toggle is-off",
+            role = "switch",
+            `aria-checked` = "false",
+            span(class = "gate-sync-toggle-copy",
+              span(class = "gate-sync-toggle-title", "Gate sync is off"),
+              span(class = "gate-sync-toggle-note", "This sample has its own gate edits now. You can reset or resync it from Workspace.")
+            ),
+            span(class = "gate-sync-toggle-action",
+              span(class = "gate-sync-switch", `aria-hidden` = "true")
+            )
+          )
         ))
       }
       NULL
@@ -573,12 +1021,24 @@ gating_page_server <- function(id, shared) {
       actionButton(session$ns("save_gate"), label, class = "btn btn-primary w-100")
     })
 
+    axis_control_updating <- reactiveVal(FALSE)
+
     output$axis_controls <- renderUI({
       e <- active_entry()
       if (is.null(e)) return(NULL)
       axes <- flowjo_gate_axes(e)
       validate(need(length(axes) >= 2, "FCS must contain at least two numeric channels."))
-      pair <- plot_axis_pair(active_plot())
+      plot <- active_plot()
+      displayed_pair <- displayed_plot_axes[[plot]]
+      # Agent note: Controls must describe the rendered canvas; saved view axes can
+      # still refer to the parent/root context while the left canvas shows child axes.
+      pair <- if (!is.null(displayed_pair$x) && !is.null(displayed_pair$y)) {
+        displayed_pair
+      } else {
+        plot_axis_pair(plot)
+      }
+      axis_control_updating(TRUE)
+      session$onFlushed(function() axis_control_updating(FALSE), once = TRUE)
       axis_row <- function(axis, selected) {
         label <- sprintf("%s axis", toupper(axis))
         div(
@@ -603,23 +1063,35 @@ gating_page_server <- function(id, shared) {
     })
 
     observeEvent(input$x_channel, {
+      if (isTRUE(axis_control_updating())) {
+        axis_debug("[gating-axis] ignore x_channel=%s while controls updating active=%s", input$x_channel %||% "<null>", active_plot() %||% "<null>")
+        return()
+      }
       plot <- active_plot()
       pair <- plot_axes[[plot]] %||% plot_axis_pair(plot)
       pair$x <- input$x_channel
       plot_axes[[plot]] <- pair
       axes <- view_axes()
-      axes[[view_axis_key(plot, plot_focus_gate_id(plot))]] <- pair
+      key <- view_axis_key(plot, plot_focus_gate_id(plot))
+      axes[[key]] <- pair
       view_axes(axes)
+      axis_debug("[gating-axis] save x_channel=%s plot=%s key=%s pair=%s/%s", input$x_channel %||% "<null>", plot %||% "<null>", key, pair$x %||% "<null>", pair$y %||% "<null>")
     }, ignoreInit = TRUE)
 
     observeEvent(input$y_channel, {
+      if (isTRUE(axis_control_updating())) {
+        axis_debug("[gating-axis] ignore y_channel=%s while controls updating active=%s", input$y_channel %||% "<null>", active_plot() %||% "<null>")
+        return()
+      }
       plot <- active_plot()
       pair <- plot_axes[[plot]] %||% plot_axis_pair(plot)
       pair$y <- input$y_channel
       plot_axes[[plot]] <- pair
       axes <- view_axes()
-      axes[[view_axis_key(plot, plot_focus_gate_id(plot))]] <- pair
+      key <- view_axis_key(plot, plot_focus_gate_id(plot))
+      axes[[key]] <- pair
       view_axes(axes)
+      axis_debug("[gating-axis] save y_channel=%s plot=%s key=%s pair=%s/%s", input$y_channel %||% "<null>", plot %||% "<null>", key, pair$x %||% "<null>", pair$y %||% "<null>")
     }, ignoreInit = TRUE)
 
     axis_modal_axis <- reactiveVal(NULL)
@@ -689,6 +1161,7 @@ gating_page_server <- function(id, shared) {
       }
       default_type <- flowjo_default_axis_scale_type(channel)
       current_setting <- settings[[channel]] %||% settings[[col]] %||%
+        e$wsp_axis_transforms[[channel]] %||% e$wsp_axis_transforms[[col]] %||%
         flowjo_axis_scale_setting(default_type, t = flowjo_channel_range(e, channel, col)) %||%
         list(type = default_type)
       rng <- modal_axis_display_range(e, channel, col, current_setting, use_manual = TRUE)
@@ -707,13 +1180,26 @@ gating_page_server <- function(id, shared) {
     observeEvent(input$adjust_y_axis, open_axis_modal("y"), ignoreInit = TRUE)
 
     modal_axis_setting <- function(e, channel, col) {
-      flowjo_axis_scale_setting(
-        input$axis_scale_type %||% "none",
-        input$axis_axis_w %||% 1.25,
-        input$axis_axis_p %||% 5,
-        input$axis_axis_n %||% 0,
-        t = flowjo_channel_range(e, channel, col)
-      )
+      scale_type <- input$axis_scale_type %||% "none"
+      w <- suppressWarnings(as.numeric(input$axis_axis_w %||% 1.25))
+      p <- suppressWarnings(as.numeric(input$axis_axis_p %||% 5))
+      n <- suppressWarnings(as.numeric(input$axis_axis_n %||% 0))
+      current <- shared$transforms$settings()[[channel]] %||%
+        shared$transforms$settings()[[col]] %||%
+        e$wsp_axis_transforms[[channel]] %||% e$wsp_axis_transforms[[col]]
+      if (identical(current$engine %||% NULL, "flowjo") && identical(current$type %||% NULL, "linear") && identical(scale_type, "none")) {
+        return(current)
+      }
+      # Agent note: WSP slider values are rounded to the app's friendly step
+      # size. Preserve the exact FlowJo transform when the user has not really
+      # changed those rounded values; a deliberate slider move creates the
+      # existing app-native manual logicle setting.
+      if (identical(current$engine %||% NULL, "flowjo") && identical(scale_type, "biex") &&
+          all(is.finite(c(w, p, n, current$w, current$p, current$n))) &&
+          all(abs(c(w, p, n) - c(current$w, current$p, current$n)) <= 0.03)) {
+        return(current)
+      }
+      flowjo_axis_scale_setting(scale_type, w, p, n, t = flowjo_channel_range(e, channel, col))
     }
 
     modal_axis_display_range <- function(e, channel, col, setting, use_manual = FALSE) {
@@ -836,24 +1322,40 @@ gating_page_server <- function(id, shared) {
     })
 
     output$gate_toolbar <- renderUI({
-      tool_names <- list(
-        tags$span(icon("square"), tags$span(class = "visually-hidden", "Rectangle")),
-        tags$span(icon("arrows-left-right"), tags$span(class = "visually-hidden", "Range")),
-        tags$span(icon("draw-polygon"), tags$span(class = "visually-hidden", "Polygon")),
-        tags$span(icon("circle"), tags$span(class = "visually-hidden", "Ellipse")),
-        tags$span(icon("crosshairs"), tags$span(class = "visually-hidden", "Quadrant")),
-        tags$span(icon("wave-square"), tags$span(class = "visually-hidden", "Curved quadrant"))
+      # Agent note: These SVGs depict actual gate geometry. Advanced icons stay
+      # disabled until drawing, membership, editing and export support agree.
+      shapes <- c(
+        rectangle = '<rect x="4" y="6" width="24" height="20"/>',
+        range = '<path d="M5 8V24 M5 16H27 M27 8V24"/>',
+        polygon = '<path d="M5 7L18 4L28 13L23 27L6 24Z"/>',
+        ellipse = '<ellipse cx="16" cy="16" rx="13" ry="9"/>',
+        quadrant = '<path d="M16 3V29 M3 16H29"/>',
+        freehand = '<path d="M4 16C2 8 9 11 11 5S22 9 27 8S27 22 23 23S15 28 9 25S8 19 4 16Z"/>',
+        autogate = '<path d="M3 17C2 5 15 2 25 8S31 24 20 28S4 26 3 17Z M8 17C7 9 16 7 22 12S25 22 18 24S8 23 8 17Z"/><circle cx="16" cy="16" r="2"/>',
+        spider = '<path d="M16 15L17.5 2 M16 15L17.5 30 M16 15L2 16.5 M16 15L30 16.5"/>',
+        curved_quadrant = '<path d="M2 17H15V30 M15 17C15 12 15.3 8 17.3 2 M15 17C21 17 25 16.8 30 15"/>',
+        boolean = '<circle cx="12" cy="16" r="9"/><circle cx="21" cy="16" r="9"/><path d="M15 9L18 12 M13 12L19 18 M13 17L17 21"/>'
       )
-      tool_values <- c("rectangle", "range", "polygon", "ellipse", "quadrant", "curved_quadrant")
-      tags$div(
-        class = "gate-toolbar plot-toolbox Pinhki-plot-toolbox app-tab-pill-track",
-        radioButtons(
-          session$ns("gate_type"), NULL,
-          choiceNames = tool_names,
-          choiceValues = tool_values,
-          selected = "rectangle",
-          inline = TRUE
-        )
+      names <- c(rectangle = "Rectangle", range = "Range", polygon = "Polygon",
+        ellipse = "Ellipse", quadrant = "Quadrants", freehand = "Freehand",
+        autogate = "Autogate", spider = "Spider quadrants",
+        curved_quadrant = "Curly quadrants", boolean = "Boolean")
+      descriptions <- c(rectangle = "Drag a box", range = "Select an X interval",
+        polygon = "Click vertices; double-click to finish", ellipse = "Drag an oval",
+        quadrant = "Set X/Y thresholds for a quadrant region")
+      glyph <- function(value) HTML(sprintf(
+        '<svg class="gate-tool-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">%s</svg>', shapes[[value]]))
+      available <- names(descriptions)
+      unavailable <- setdiff(names(shapes), available)
+      tags$div(class = "gate-toolbar gate-icon-toolbar",
+        radioButtons(session$ns("gate_type"), NULL,
+          choiceNames = lapply(available, function(value) tags$span(
+            title = paste(names[[value]], descriptions[[value]], sep = " — "),
+            glyph(value), tags$span(class = "visually-hidden", names[[value]]))),
+          choiceValues = available, selected = isolate(input$gate_type) %||% "rectangle", inline = TRUE),
+        lapply(unavailable, function(value) tags$span(class = "gate-tool-unavailable",
+          title = paste0(names[[value]], " — unavailable"),
+          tags$button(type = "button", disabled = "disabled", `aria-label` = paste0(names[[value]], " — unavailable"), glyph(value))))
       )
     })
 
@@ -864,21 +1366,16 @@ gating_page_server <- function(id, shared) {
       if (identical(plot, "right") && is.null(preview_focus_gate_id(gates))) return("New gate")
       gid <- plot_focus_gate_id(plot, gates)
       sample_name <- e$name %||% e$id %||% ""
-      paste(sample_name, gate_path_label(gates, gid), sep = " | ")
+      path <- gate_path_label(gates, gid)
+      population <- if (is.null(gid) || identical(gid, "root")) "Root" else gates[[gid]]$name %||% gid
+      tagList(
+        span(class = "gate-plot-population", paste(sample_name, population, sep = " | ")),
+        span(class = "gate-plot-path", title = path, span(class = "gate-plot-path-text", dir = "ltr", path))
+      )
     }
 
-    plot_axis_chip <- function(plot) {
-      gates <- shared$gating$gates()
-      gid <- plot_focus_gate_id(plot, gates)
-      gate <- if (!is.null(gid) && !identical(gid, "root")) gates[[gid]] else NULL
-      if (is.null(gate)) return(NULL)
-      pair <- plot_axis_pair(plot, gid)
-      if (identical(pair$x, gate$x_channel) && identical(pair$y, gate$y_channel)) return(NULL)
-      span(class = "gate-axis-chip", sprintf("Gate: %s / %s", gate$x_channel, gate$y_channel %||% ""))
-    }
-
-    output$plot_title_left <- renderUI(div(class = "gate-plot-title", plot_title("left"), plot_axis_chip("left")))
-    output$plot_title_right <- renderUI(div(class = "gate-plot-title", plot_title("right"), plot_axis_chip("right")))
+    output$plot_title_left <- renderUI(div(class = "gate-plot-title", plot_title("left")))
+    output$plot_title_right <- renderUI(div(class = "gate-plot-title", plot_title("right")))
 
     preview_arrow <- function(id, icon_name, title) {
       actionButton(session$ns(id), icon(icon_name), label = NULL, title = title, class = "btn btn-light btn-sm gate-preview-arrow")
@@ -898,10 +1395,10 @@ gating_page_server <- function(id, shared) {
 
     output$preview_sample_nav <- renderUI({
       gates <- shared$gating$gates()
-      gid <- shared$gating$active_gate_id()
+      gid <- displayed_population_gate_id(gates)
       sid <- active_sample_id()
-      prev_sid <- flowjo_prev_next_sample(shared$fcs$registry(), gates, gid, sid, -1L)
-      next_sid <- flowjo_prev_next_sample(shared$fcs$registry(), gates, gid, sid, 1L)
+      prev_sid <- prev_next_preview_sample(gates, gid, sid, -1L)
+      next_sid <- prev_next_preview_sample(gates, gid, sid, 1L)
       if (is.null(prev_sid) && is.null(next_sid)) return(NULL)
       div(class = "gate-preview-nav gate-preview-nav-vertical",
         if (!is.null(prev_sid)) preview_arrow("preview_prev_sample", "chevron-up", "Previous sample"),
@@ -931,8 +1428,24 @@ gating_page_server <- function(id, shared) {
           ),
           if (!isTRUE(blank) && isTRUE(active)) tags$div(class = "gate-plot-badge", "Editing"),
           if (isTRUE(blank)) div(class = "gate-blank-note", "Draw a gate on the left, then open it to view the gated population here."),
+          if (!isTRUE(blank)) tags$details(class = "gate-plot-export",
+            tags$summary("Export"),
+            tags$label(tags$input(type = "checkbox", class = "gate-export-axis-text", checked = "checked"), " Axis text"),
+            tags$button(type = "button", `data-gate-export` = "svg", "SVG"),
+            tags$button(type = "button", `data-gate-export` = "png", "PNG")
+          ),
           tags$canvas(class = "gate-canvas gate-canvas-points"),
-          tags$canvas(class = "gate-canvas gate-canvas-overlay")
+          tags$canvas(class = "gate-canvas gate-canvas-overlay"),
+          tags$div(
+            class = "Pinhki-plot-pending",
+            role = "status",
+            `aria-live` = "polite",
+            `aria-hidden` = "true",
+            tags$div(class = "Pinhki-plot-pending-points", `aria-hidden` = "true",
+              lapply(seq_len(9L), function(i) tags$span(class = "Pinhki-plot-pending-point"))
+            ),
+            tags$span(class = "Pinhki-plot-pending-label", "Preparing plot\u2026")
+          )
         )
       }
       div(
@@ -1045,6 +1558,9 @@ gating_page_server <- function(id, shared) {
         if (identical(saved$type %||% NULL, "biex") && is.null(saved$t)) saved$t <- flowjo_channel_range(entry, channel, col) %||% 262144
         return(saved)
       }
+      wsp_settings <- entry$wsp_axis_transforms %||% list()
+      wsp_saved <- wsp_settings[[channel]] %||% wsp_settings[[col]]
+      if (!is.null(wsp_saved)) return(wsp_saved)
       flowjo_axis_scale_setting(flowjo_default_axis_scale_type(channel), t = flowjo_channel_range(entry, channel, col))
     }
 
@@ -1107,7 +1623,17 @@ gating_page_server <- function(id, shared) {
     }
 
     raw_gate_for_canvas <- function(gate, x_channel, y_channel, entry) {
-      display_gate <- flowjo_gate_for_plot_axes(gate, x_channel, y_channel)
+      # Agent note: FlowJo can retain sample-specific gate geometry even when a
+      # population path is shared. Use that geometry for the active sample so
+      # imported overlays do not silently show the first sample's gate.
+      sample_geometry <- gate$wsp_geometry_by_sample[[entry$id %||% ""]] %||% NULL
+      gate_for_entry <- gate
+      # Agent note: WSP sample entries are converted gate descriptors, not bare
+      # geometry. Unwrap them before axis conversion or outlines lose their vertices.
+      if (!is.null(sample_geometry)) {
+        gate_for_entry$geometry <- sample_geometry$geometry %||% sample_geometry
+      }
+      display_gate <- flowjo_gate_for_plot_axes(gate_for_entry, x_channel, y_channel)
       display_gate$geometry <- convert_gate_geometry_scale(
         display_gate$geometry,
         display_gate$type,
@@ -1160,12 +1686,11 @@ gating_page_server <- function(id, shared) {
       label
     }
 
-    canvas_auto_range <- function(vals, channel, scale_override = NULL, raw_vals = NULL, setting = NULL, gate_vals = numeric()) {
+    canvas_auto_range <- function(vals, channel, scale_override = NULL, raw_vals = NULL, setting = NULL) {
       if (!is.null(scale_override)) return(scale_override)
       vals <- vals[is.finite(vals)]
-      gate_vals <- gate_vals[is.finite(gate_vals)]
-      if (!length(vals) && !length(gate_vals)) return(c(0, 1))
-      rng <- if (length(vals)) range(vals) else range(gate_vals)
+      if (!length(vals)) return(c(0, 1))
+      rng <- range(vals)
       if (length(vals)) {
         qs <- stats::quantile(vals, probs = c(0.001, 0.999), na.rm = TRUE, names = FALSE, type = 8)
         if (all(is.finite(qs)) && qs[[2]] > qs[[1]]) rng <- qs
@@ -1175,7 +1700,6 @@ gating_page_server <- function(id, shared) {
         zero_val <- flowjo_transform_column(0, setting)
         if (is.finite(zero_val) && zero_val < rng[[2]]) rng[[1]] <- zero_val
       }
-      if (length(gate_vals)) rng <- range(c(rng, gate_vals))
       pad <- diff(rng) * 0.04
       if (!is.finite(pad) || pad <= 0) pad <- 1
       rng + c(-pad, pad)
@@ -1188,13 +1712,21 @@ gating_page_server <- function(id, shared) {
       if (!is.null(manual_rng) && length(manual_rng) == 2 && all(is.finite(manual_rng))) {
         return(sort(flowjo_transform_column(manual_rng, setting)))
       }
+      # Agent note: WSP transform domains precede app autoscale caches; imported plots must retain FlowJo channel limits.
+      if (identical(setting$source %||% NULL, "wsp")) {
+        wsp_rng <- if (identical(setting$type, "linear")) {
+          flowjo_transform_column(c(setting$min_range, setting$max_range), setting)
+        } else if (identical(setting$type, "biex") && identical(setting$engine, "flowjo")) {
+          c(0, setting$channel_range)
+        } else NULL
+        if (length(wsp_rng) == 2 && all(is.finite(wsp_rng)) && diff(wsp_rng) > 0) return(wsp_rng)
+      }
       auto_scales <- shared$transforms$auto_scales()
       auto_rng <- auto_scales[[col]]
       if (!is.null(auto_rng) && length(auto_rng) == 2 && all(is.finite(auto_rng))) {
-        next_rng <- c(min(auto_rng[[1]], next_rng[[1]]), max(auto_rng[[2]], next_rng[[2]]))
-        if (!any(abs(auto_rng - next_rng) > 1e-8)) return(auto_rng)
+        return(auto_rng)
       }
-      # Agent note: auto ranges can expand to keep data/gates visible, but only manual scales may intentionally shrink.
+      # Agent note: The channel viewport is established from event data once. Gate geometry may extend beyond it and must never expand it or trigger another point-layer refresh.
       auto_scales[[col]] <- next_rng
       shared$transforms$auto_scales(auto_scales)
       next_rng
@@ -1242,23 +1774,12 @@ gating_page_server <- function(id, shared) {
     preview_full_data <- reactive({
       e <- active_entry()
       req(e, input$x_channel, input$y_channel)
-      x_col <- flowjo_channel_to_marker(e$channel_map, input$x_channel)
-      y_col <- flowjo_channel_to_marker(e$channel_map, input$y_channel)
-      req(x_col, y_col)
-      gates <- shared$gating$gates()
-      df <- flowjo_transform_data(e$df, effective_transform_settings(e, input$x_channel, input$y_channel, gates))
-      keep <- is.finite(df[[x_col]]) & is.finite(df[[y_col]])
-      parent <- active_parent_keep(e$df, e$channel_map, gates, shared$gating$active_gate_id())
-      if (!is.null(parent)) keep <- keep & parent
-      df <- df[keep, , drop = FALSE]
-      list(df = df, x_col = x_col, y_col = y_col, entry = e)
+      preview_data_for_context(e, shared$gating$active_gate_id(), input$x_channel, input$y_channel)
     })
 
     preview_data <- reactive({
       pd <- preview_full_data()
-      df <- pd$df
-      if (nrow(df) > 150000) df <- df[sample.int(nrow(df), 150000), , drop = FALSE]
-      pd$df <- df
+      if (isTRUE(pd$full_cache)) pd$df <- plot_sample(pd$df)
       pd
     })
 
@@ -1307,7 +1828,12 @@ gating_page_server <- function(id, shared) {
     axis_hist_raw_values <- function(at, setting) {
       if (is.null(setting) || is.null(setting$type)) return(at)
       if (identical(setting$type, "log1p")) return(expm1(at))
+      if (identical(setting$type, "linear")) return(flowjo_inverse_transform_column(at, setting))
       if (identical(setting$type, "biex")) {
+        if (identical(setting$engine %||% NULL, "flowjo")) {
+          exact <- flowjo_inverse_transform_column(at, setting)
+          if (!is.null(exact)) return(exact)
+        }
         tf <- tryCatch(flowCore::logicleTransform(w = setting$w, t = setting$t %||% 262144, m = setting$p, a = setting$n), error = function(e) NULL)
         if (!is.null(tf)) {
           inv <- flowCore::inverseLogicleTransform(trans = tf)
@@ -1332,6 +1858,36 @@ gating_page_server <- function(id, shared) {
       }, character(1))
     }
 
+    axis_canvas_tick_text <- function(x, linear = FALSE, exponent = 0L) {
+      superscript <- function(value) {
+        chars <- strsplit(as.character(value), "", fixed = TRUE)[[1]]
+        map <- c("-" = "\u207b", "0" = "\u2070", "1" = "\u00b9", "2" = "\u00b2", "3" = "\u00b3", "4" = "\u2074", "5" = "\u2075", "6" = "\u2076", "7" = "\u2077", "8" = "\u2078", "9" = "\u2079")
+        paste0(vapply(chars, function(ch) unname(map[[ch]] %||% ch), character(1)), collapse = "")
+      }
+      vapply(x, function(value) {
+        if (!is.finite(value)) return("")
+        if (abs(value) < 1e-9) return("0")
+        if (isTRUE(linear)) return(format(signif(value / 10 ^ exponent, 12), scientific = FALSE, trim = TRUE, big.mark = ","))
+        magnitude <- abs(value)
+        power <- round(log10(magnitude))
+        if (abs(magnitude - 10 ^ power) <= magnitude * 1e-8) {
+          text <- if (power == 0L) "1" else if (power == 1L) "10" else paste0("10", superscript(power))
+          return(paste0(if (value < 0) "\u2212" else "", text))
+        }
+        ""
+      }, character(1))
+    }
+
+    safe_axis_tick_transform <- function(vals, setting) {
+      tryCatch(
+        flowjo_transform_column(vals, setting),
+        error = function(e) {
+          axis_debug("[gating-axis] tick transform failed type=%s message=%s", setting$type %||% "<none>", conditionMessage(e))
+          rep(NA_real_, length(vals))
+        }
+      )
+    }
+
     axis_hist_ticks <- function(raw_vals, plot_vals, setting) {
       plot_vals <- plot_vals[is.finite(plot_vals)]
       if (!length(plot_vals)) return(list(at = numeric(), raw = numeric(), minor = numeric()))
@@ -1341,33 +1897,60 @@ gating_page_server <- function(id, shared) {
         return(list(at = major, raw = major, minor = setdiff(minor, major)))
       }
       raw_vals <- raw_vals[is.finite(raw_vals)]
+      # Agent note: Linear WSP transforms need additive raw-value ticks, not logarithmic decades.
+      if (identical(setting$type, "linear") && length(raw_vals)) {
+        raw_major <- pretty(range(raw_vals), n = 5)
+        step <- if (length(raw_major) > 1) diff(raw_major)[[1]] / 5 else 1
+        raw_minor <- seq(min(raw_major), max(raw_major), by = step)
+        at <- safe_axis_tick_transform(raw_major, setting)
+        minor <- safe_axis_tick_transform(raw_minor, setting)
+        keep <- is.finite(at) & at >= min(plot_vals) & at <= max(plot_vals)
+        minor <- minor[is.finite(minor) & minor >= min(plot_vals) & minor <= max(plot_vals)]
+        return(list(at = at[keep], raw = raw_major[keep], minor = setdiff(minor, at[keep])))
+      }
       if (!length(raw_vals)) {
         at <- pretty(plot_vals, n = 5)
         return(list(at = at, raw = axis_hist_raw_values(at, setting), minor = pretty(plot_vals, n = 20)))
       }
       pos <- raw_vals[raw_vals > 0]
+      neg <- raw_vals[raw_vals < 0]
       raw_ticks <- numeric()
       if (length(pos)) {
         lo <- if (identical(setting$type %||% NULL, "biex") && max(pos) >= 10000) 3 else floor(log10(min(pos)))
         raw_ticks <- 10 ^ seq(lo, ceiling(log10(max(pos))))
       }
-      if (identical(setting$type %||% NULL, "biex") && any(raw_vals >= 10000, na.rm = TRUE)) raw_ticks <- c(0, raw_ticks)
-      if (any(raw_vals <= 0)) raw_ticks <- c(pretty(raw_vals[raw_vals <= 0], n = 3), raw_ticks)
-      keep_zero <- identical(setting$type %||% NULL, "biex") && any(raw_vals >= 10000, na.rm = TRUE)
+      if (length(neg)) {
+        neg_abs <- abs(neg)
+        raw_ticks <- c(-(10 ^ seq(floor(log10(min(neg_abs))), ceiling(log10(max(neg_abs))))), raw_ticks)
+      }
+      zero_at <- safe_axis_tick_transform(0, setting)
+      keep_zero <- length(zero_at) && is.finite(zero_at) && zero_at >= min(plot_vals) && zero_at <= max(plot_vals)
+      if (keep_zero) raw_ticks <- c(raw_ticks, 0)
       raw_ticks <- sort(unique(raw_ticks[(raw_ticks >= min(raw_vals) | (keep_zero & raw_ticks == 0)) & raw_ticks <= max(raw_vals)]))
       raw_minor <- numeric()
       if (length(pos)) {
-        decades <- seq(floor(log10(max(min(pos), .Machine$double.eps))), ceiling(log10(max(pos))))
+        # Agent note: Canvas supplies only range endpoints; when crossing zero, the positive endpoint is not the lowest visible positive decade.
+        lower <- if (min(raw_vals) <= 0) min(2, floor(log10(max(pos)))) else floor(log10(min(pos)))
+        decades <- seq(lower, ceiling(log10(max(pos))))
         raw_minor <- sort(unique(as.vector(outer(2:9, 10 ^ decades))))
       }
-      at <- flowjo_transform_column(raw_ticks, setting)
-      minor <- flowjo_transform_column(raw_minor, setting)
-      keep <- is.finite(at) & at >= min(plot_vals) & at <= max(plot_vals)
-      if (sum(keep) < 3) {
-        at <- pretty(plot_vals, n = 5)
-        return(list(at = at, raw = axis_hist_raw_values(at, setting), minor = pretty(plot_vals, n = 20)))
+      if (length(neg)) {
+        lower <- if (max(raw_vals) >= 0) min(2, floor(log10(max(abs(neg))))) else floor(log10(min(abs(neg))))
+        neg_decades <- seq(lower, ceiling(log10(max(abs(neg)))))
+        raw_minor <- c(-sort(unique(as.vector(outer(2:9, 10 ^ neg_decades)))), raw_minor)
       }
+      at <- safe_axis_tick_transform(raw_ticks, setting)
+      minor <- safe_axis_tick_transform(raw_minor, setting)
+      keep <- is.finite(at) & at >= min(plot_vals) & at <= max(plot_vals)
+      # Agent note: A zoomed transformed range may contain no decade. Keep its
+      # raw 2–9 decade subdivisions; never substitute linear display-space ticks.
       minor <- minor[is.finite(minor) & minor >= min(plot_vals) & minor <= max(plot_vals)]
+      if (length(minor) < 2L) {
+        # Tight zooms need finer raw-value subdivisions, transformed by the same axis.
+        fine_raw <- pretty(range(raw_vals), n = 10)
+        fine_at <- safe_axis_tick_transform(fine_raw, setting)
+        minor <- fine_at[is.finite(fine_at) & fine_at >= min(plot_vals) & fine_at <= max(plot_vals)]
+      }
       at <- at[keep]; raw_ticks <- raw_ticks[keep]
       if (length(at) > 6) {
         idx <- unique(round(seq(1, length(at), length.out = 6)))
@@ -1376,11 +1959,19 @@ gating_page_server <- function(id, shared) {
       list(at = at, raw = raw_ticks, minor = setdiff(minor, at))
     }
 
-    canvas_axis_ticks <- function(raw_vals, plot_vals, setting) {
-      ticks <- axis_hist_ticks(raw_vals, plot_vals, setting)
+    canvas_axis_ticks <- function(plot_range, setting) {
+      plot_range <- sort(as.numeric(plot_range))
+      raw_range <- axis_hist_raw_values(plot_range, setting)
+      # Agent note: Tick positions use the exact transform; labels always represent
+      # raw values. Linear axes share one multiplier; other axes label decades only.
+      ticks <- axis_hist_ticks(raw_range, plot_range, setting)
+      linear <- is.null(setting$type) || identical(setting$type, "linear")
+      largest <- max(c(0, abs(ticks$raw)), na.rm = TRUE)
+      exponent <- if (linear && largest >= 10000) as.integer(3 * floor(log10(largest) / 3)) else 0L
       list(
         major = unname(ticks$at),
-        labels = unname(flowjo_axis_labeler(setting)(ticks$at)),
+        labels = unname(axis_canvas_tick_text(ticks$raw, linear = linear, exponent = exponent)),
+        multiplier = if (exponent > 0L) paste0("×", axis_canvas_tick_text(10 ^ exponent)) else "",
         minor = unname(ticks$minor)
       )
     }
@@ -1394,13 +1985,7 @@ gating_page_server <- function(id, shared) {
       col <- flowjo_channel_to_marker(e$channel_map, channel)
       req(col)
       raw_vals <- axis_population_raw_values(e, channel, axis_modal_plot() %||% active_plot())
-      setting <- flowjo_axis_scale_setting(
-        input$axis_scale_type %||% "none",
-        input$axis_axis_w %||% 1.25,
-        input$axis_axis_p %||% 5,
-        input$axis_axis_n %||% 0,
-        t = flowjo_channel_range(e, channel, col)
-      )
+      setting <- modal_axis_setting(e, channel, col)
       vals <- flowjo_transform_column(raw_vals, setting)
       vals <- vals[is.finite(vals)]
       validate(need(length(unique(vals)) > 1, "No finite events for this axis."))
@@ -1484,6 +2069,12 @@ gating_page_server <- function(id, shared) {
       gates[[gid]]$x_channel <- channels$x
       gates[[gid]]$y_channel <- channels$y
       gates[[gid]]$geometry <- geom
+      if (is.list(gates[[gid]]$wsp_geometry_by_sample) && nzchar(e$id %||% "")) {
+        # Agent note: Imported WSP geometry can differ by sample. Once the
+        # active sample is edited, keep that sample-local override so the next
+        # redraw does not restore FlowJo's original coordinates.
+        gates[[gid]]$wsp_geometry_by_sample[[e$id]] <- geom
+      }
       gates[[gid]]$source_sample_id <- e$id
       gates <- mark_gate_modified_or_sync(gates, gid)
       if (is.null(gates[[gid]]$sync_group_id)) gates[[gid]]$applied_sample_id <- e$id
@@ -1565,6 +2156,12 @@ gating_page_server <- function(id, shared) {
       req(gid, gates[[gid]], msg$geometry)
       channels <- list(x = gates[[gid]]$x_channel, y = gates[[gid]]$y_channel)
       gates[[gid]]$geometry <- canvas_geometry_to_raw(msg$geometry, gates[[gid]]$type, channels)
+      e <- active_entry()
+      if (is.list(gates[[gid]]$wsp_geometry_by_sample) && !is.null(e) && nzchar(e$id %||% "")) {
+        # Agent note: Keep drag edits in the same per-sample slot used by WSP
+        # overlays; otherwise the imported geometry would snap back on redraw.
+        gates[[gid]]$wsp_geometry_by_sample[[e$id]] <- gates[[gid]]$geometry
+      }
       gates <- mark_gate_modified_or_sync(gates, gid)
       persist_gate_autoscale(gates[[gid]], gates)
       shared$gating$gates(gates)
@@ -1627,32 +2224,76 @@ gating_page_server <- function(id, shared) {
       gates <- shared$gating$gates()
       axis_gate <- if (!is.null(axis_gate_id) && !identical(axis_gate_id, "root")) gates[[axis_gate_id]] else NULL
       pair <- if (!is.null(axis_gate)) list(x = axis_gate$x_channel, y = axis_gate$y_channel) else plot_axis_pair(plot_name)
-      req(e, pair$x, pair$y)
-      x_col <- flowjo_channel_to_marker(e$channel_map, pair$x)
-      y_col <- flowjo_channel_to_marker(e$channel_map, pair$y)
-      df <- flowjo_transform_data(e$df, effective_transform_settings(e, pair$x, pair$y, gates))
-      keep <- is.finite(df[[x_col]]) & is.finite(df[[y_col]])
-      parent <- active_parent_keep(e$df, e$channel_map, gates, gate_id)
-      if (!is.null(parent)) keep <- keep & parent
-      df <- df[keep, , drop = FALSE]
-      if (nrow(df) > 150000) df <- df[sample.int(nrow(df), 150000), , drop = FALSE]
-      list(df = df, x_col = x_col, y_col = y_col, entry = e, x_channel = pair$x, y_channel = pair$y)
+      axis_debug("[gating-axis] preview_data plot=%s gate=%s axis_gate=%s pair=%s/%s",
+        plot_name %||% "<null>",
+        gate_id %||% "<root>",
+        axis_gate_id %||% "<none>",
+        pair$x %||% "<null>",
+        pair$y %||% "<null>"
+      )
+      pd <- preview_data_for_context(e, gate_id, pair$x, pair$y, gates)
+      if (isTRUE(pd$full_cache)) pd$df <- plot_sample(pd$df)
+      pd
+    }
+
+    selectable_gate_ranges <- function(gate_list, x_rng, y_rng) {
+      # Agent note: Preserve gate geometry and saved zoom. Extend only to the nearest
+      # finite handle when no handle is visible; apply after saved channel ranges.
+      for (gate in gate_list) {
+        geom <- gate$geometry %||% list()
+        points <- switch(gate$type,
+          polygon = canvas_points_df(geom$vertices),
+          rectangle = expand.grid(x = c(geom$xmin, geom$xmax), y = c(geom$ymin, geom$ymax)),
+          ellipse = data.frame(x = c(geom$xmin, geom$xmax, mean(c(geom$xmin, geom$xmax)), mean(c(geom$xmin, geom$xmax))),
+            y = c(mean(c(geom$ymin, geom$ymax)), mean(c(geom$ymin, geom$ymax)), geom$ymin, geom$ymax)),
+          range = data.frame(x = c(geom$xmin, geom$xmax), y = mean(y_rng)),
+          quadrant = data.frame(x = geom$x, y = geom$y),
+          curved_quadrant = data.frame(x = geom$x, y = geom$y),
+          data.frame(x = numeric(), y = numeric()))
+        if (!nrow(points)) next
+        points <- points[is.finite(points$x) & is.finite(points$y), , drop = FALSE]
+        if (!nrow(points)) next
+        inside <- points$x >= x_rng[1] & points$x <= x_rng[2] & points$y >= y_rng[1] & points$y <= y_rng[2]
+        if (any(inside)) next
+        dx <- pmax(x_rng[1] - points$x, 0, points$x - x_rng[2]) / diff(x_rng)
+        dy <- pmax(y_rng[1] - points$y, 0, points$y - y_rng[2]) / diff(y_rng)
+        nearest <- points[which.min(dx ^ 2 + dy ^ 2), , drop = FALSE]
+        extend <- function(rng, value) {
+          padding <- diff(rng) * 0.015
+          if (value < rng[1]) rng[1] <- value - padding
+          if (value > rng[2]) rng[2] <- value + padding
+          rng
+        }
+        x_rng <- extend(x_rng, nearest$x)
+        y_rng <- extend(y_rng, nearest$y)
+      }
+      list(x = x_rng, y = y_rng)
     }
 
     canvas_payload <- function(wrap_id, plot_name, focus_gate_id, editable = FALSE, selected_gate_id = NULL, axis_gate_id = NULL) {
-      mode <- input$display_mode %||% "dot"
+      # Agent note: Display mode belongs to each canvas; reading the shared dropdown here makes an inactive plot change on its next refresh.
+      mode <- isolate(plot_display_modes[[plot_name]]) %||% "pseudocolor"
       pd <- preview_data_for_gate(focus_gate_id, plot_name, axis_gate_id)
       if (plot_name %in% c("left", "right")) {
         displayed_plot_axes[[plot_name]] <- list(x = pd$x_channel, y = pd$y_channel)
       }
+      axis_debug("[gating-axis] payload plot=%s focus=%s selected=%s axis_gate=%s final=%s/%s editable=%s",
+        plot_name %||% "<null>",
+        focus_gate_id %||% "<root>",
+        selected_gate_id %||% "<none>",
+        axis_gate_id %||% "<none>",
+        pd$x_channel %||% "<null>",
+        pd$y_channel %||% "<null>",
+        isTRUE(editable)
+      )
       gates <- shared$gating$gates()
       # Agent note: Canvas payload must be sample-scoped; synced copies from other samples share axes/parents and otherwise stack labels on one plot.
       plot_gates <- gates[vapply(gates, function(g) isTRUE(flowjo_gate_applicability(pd$entry, g, gates)$ok), logical(1))]
       stats <- active_sample_stats()
       plot_gate_list <- function() {
         parent_id <- focus_gate_id %||% "root"
-        # Agent note: Right preview overlays are subtree-scoped so nested gates stay visible while editing the current child population.
-        context_ids <- if (identical(plot_name, "right")) gate_descendant_ids(plot_gates, parent_id) else flowjo_gate_children(plot_gates, parent_id)
+        # Agent note: Show one population layer; deeper branches can reuse these channels but gate different event subsets.
+        context_ids <- flowjo_gate_children(plot_gates, parent_id)
         out <- lapply(seq_along(plot_gates), function(i) {
           g <- plot_gates[[i]]
           if (!g$id %in% context_ids) return(NULL)
@@ -1703,18 +2344,17 @@ gating_page_server <- function(id, shared) {
       gate_list <- plot_gate_list()
       x_setting <- effective_axis_setting(pd$x_channel, pd$x_col, pd$entry)
       y_setting <- effective_axis_setting(pd$y_channel, pd$y_col, pd$entry)
-      x_raw_col <- flowjo_channel_to_marker(pd$entry$channel_map, pd$x_channel)
-      y_raw_col <- flowjo_channel_to_marker(pd$entry$channel_map, pd$y_channel)
-      full_x <- flowjo_transform_column(pd$entry$df[[x_raw_col]], x_setting)
-      full_y <- flowjo_transform_column(pd$entry$df[[y_raw_col]], y_setting)
-      x_rng <- canvas_auto_range(pd$df[[pd$x_col]], pd$x_channel, NULL, numeric(), x_setting, gate_axis_values(gate_list, "x"))
-      y_rng <- canvas_auto_range(pd$df[[pd$y_col]], pd$y_channel, NULL, numeric(), y_setting, gate_axis_values(gate_list, "y"))
+      x_rng <- canvas_auto_range(pd$df[[pd$x_col]], pd$x_channel, NULL, numeric(), x_setting)
+      y_rng <- canvas_auto_range(pd$df[[pd$y_col]], pd$y_channel, NULL, numeric(), y_setting)
       x_rng <- channel_canvas_range(pd$x_channel, pd$x_col, x_rng, x_setting)
       y_rng <- channel_canvas_range(pd$y_channel, pd$y_col, y_rng, y_setting)
-      x_ticks <- canvas_axis_ticks(pd$entry$df[[x_raw_col]], full_x, x_setting)
-      y_ticks <- canvas_axis_ticks(pd$entry$df[[y_raw_col]], full_y, y_setting)
       if (!all(is.finite(x_rng)) || x_rng[1] == x_rng[2]) x_rng <- c(0, 1)
       if (!all(is.finite(y_rng)) || y_rng[1] == y_rng[2]) y_rng <- c(0, 1)
+      visible_ranges <- selectable_gate_ranges(gate_list, x_rng, y_rng)
+      x_rng <- visible_ranges$x
+      y_rng <- visible_ranges$y
+      x_ticks <- canvas_axis_ticks(x_rng, x_setting)
+      y_ticks <- canvas_axis_ticks(y_rng, y_setting)
       list(
         id = session$ns(wrap_id),
         ns = session$ns(""),
@@ -1750,7 +2390,10 @@ gating_page_server <- function(id, shared) {
     preview_focus_gate_id <- function(gates = NULL) {
       if (is.null(gates)) gates <- shared$gating$gates()
       gid <- shared$gating$active_gate_id() %||% canvas_selected_gate()
-      if (!is.null(gid) && !is.null(gates[[gid]])) gid else NULL
+      if (is.null(gid) || is.null(gates[[gid]])) return(NULL)
+      e <- active_entry()
+      if (!is.null(e) && !isTRUE(flowjo_gate_applicability(e, gates[[gid]], gates)$ok)) return(NULL)
+      gid
     }
 
     ensure_active_preview_gate <- function(gates = NULL) {
@@ -1774,44 +2417,388 @@ gating_page_server <- function(id, shared) {
       )
     }
 
+    compact_canvas_payload <- function(payload) {
+      id <- payload$id %||% ""
+      point_fields <- c("blank", "plot", "parentId", "mode", "channels", "ranges", "labels", "ticks", "x", "y", "marker", "group", "groupColors")
+      key <- digest::digest(payload[intersect(point_fields, names(payload))], algo = "xxhash64")
+      if (nzchar(id) && identical(canvas_point_payload_keys[[id]], key)) {
+        payload$pointDataUnchanged <- TRUE
+        payload[c("x", "y", "marker", "group", "groupColors")] <- NULL
+      } else if (nzchar(id)) {
+        canvas_point_payload_keys[[id]] <- key
+      }
+      payload
+    }
+
     preview_payload_messages <- function(gates, active_id, active_plot_value = isolate(active_plot())) {
+      if (is.null(active_id)) return(list(active_plot_message(active_plot_value)))
       left_id <- flowjo_gate_parent_id(gates, active_id)
-      left_axis_gate_id <- if (identical(active_plot_value, "left")) NULL else active_id
-      right_axis_gate_id <- right_axis_source_gate_id(gates, active_id, active_entry()) %||% active_id
+      left_axis_gate_id <- active_id
+      right_axis_gate_id <- right_axis_template_gate_id() %||% right_axis_source_gate_id(gates, active_id, active_entry()) %||% active_id
       selected_id <- isolate(canvas_selected_gate()) %||% active_id
-      left_selected_id <- selected_id
+      left_selected_id <- if (identical(active_plot_value, "right")) active_id else selected_id
       msgs <- list(list(
         name = "flowjo-gating-payload",
         # Agent note: Parent context keeps sibling gates visible; only the selected/current gate should receive the active overlay.
-        payload = canvas_payload("canvas_wrap_left", "left", left_id, identical(active_plot_value, "left"), left_selected_id, left_axis_gate_id)
+        payload = compact_canvas_payload(
+          canvas_payload("canvas_wrap_left", "left", left_id, identical(active_plot_value, "left"), left_selected_id, left_axis_gate_id)
+        )
       ))
       if (!is.null(active_id)) {
+        # Agent note: Landing/right preview must send child-gate axes for the active sample; persisting displayed axes here can freeze old parent/default axes.
+        right_payload <- canvas_payload("canvas_wrap_right", "right", active_id, identical(active_plot_value, "right"), selected_id, right_axis_gate_id)
+        right_payload <- compact_canvas_payload(right_payload)
+        if (isTRUE(getOption("flowjo.debug.axis", FALSE))) {
+          active_gate <- gates[[active_id]]
+          axis_gate <- gates[[right_axis_gate_id]]
+          message(sprintf(
+            "[gating-axis] active=%s active_axes=%s/%s right_axis_gate=%s right_axis_axes=%s/%s payload_axes=%s/%s",
+            active_id %||% "<null>",
+            active_gate$x_channel %||% "<null>",
+            active_gate$y_channel %||% "<null>",
+            right_axis_gate_id %||% "<null>",
+            axis_gate$x_channel %||% "<null>",
+            axis_gate$y_channel %||% "<null>",
+            right_payload$xChannel %||% "<null>",
+            right_payload$yChannel %||% "<null>"
+          ))
+        }
         msgs <- c(msgs, list(list(
           name = "flowjo-gating-payload",
-          payload = canvas_payload("canvas_wrap_right", "right", active_id, identical(active_plot_value, "right"), selected_id, right_axis_gate_id)
+          payload = right_payload
         )))
       }
       c(msgs, list(active_plot_message(active_plot_value)))
     }
 
-    send_preview_messages <- function(msgs) {
-      for (msg in msgs) session$sendCustomMessage(msg$name, msg$payload)
+    active_plot_payload_message <- function(plot_name, gates = shared$gating$gates(), active_id = ensure_active_preview_gate(gates)) {
+      if (is.null(active_id) || !plot_name %in% c("left", "right")) return(NULL)
+      selected_id <- isolate(canvas_selected_gate()) %||% active_id
+      if (identical(plot_name, "left")) {
+        payload <- canvas_payload(
+          "canvas_wrap_left", "left", flowjo_gate_parent_id(gates, active_id), TRUE,
+          selected_id, active_id
+        )
+      } else {
+        axis_gate_id <- right_axis_template_gate_id() %||% right_axis_source_gate_id(gates, active_id, active_entry()) %||% active_id
+        payload <- canvas_payload("canvas_wrap_right", "right", active_id, TRUE, selected_id, axis_gate_id)
+      }
+      list(name = "flowjo-gating-payload", payload = compact_canvas_payload(payload))
     }
 
+    observeEvent(input$display_mode, {
+      plot_name <- isolate(active_plot())
+      mode <- input$display_mode %||% "pseudocolor"
+      if (!plot_name %in% c("left", "right") || identical(plot_display_modes[[plot_name]], mode)) return()
+      plot_display_modes[[plot_name]] <- mode
+      msg <- active_plot_payload_message(plot_name)
+      if (!is.null(msg)) send_preview_messages(list(msg))
+    }, ignoreInit = TRUE)
+
+    observeEvent(active_plot(), {
+      plot_name <- active_plot()
+      mode <- isolate(plot_display_modes[[plot_name]]) %||% "pseudocolor"
+      if (identical(isolate(input$display_mode), mode)) return()
+      freezeReactiveValue(input, "display_mode")
+      updateSelectInput(session, "display_mode", selected = mode)
+    }, ignoreInit = TRUE)
+
+    preload_sample_ids <- function(gates, active_id) {
+      reg <- shared$fcs$registry()
+      ids <- names(reg)
+      scope <- shared$params$plot_preload_scope()
+      if (identical(scope, "current")) return(active_sample_id() %||% character())
+      if (identical(scope, "grouped")) {
+        nav_id <- synced_nav_gate_id(gates, active_id)
+        gate <- gates[[nav_id]]
+        group_id <- gate$sync_group_id %||% gate$group_id
+        ids <- if (!is.null(group_id)) gate$sync_sample_ids %||% character() else character()
+        if (!length(ids) && !is.null(group_id)) {
+          ids <- unique(unlist(lapply(gates, function(g) {
+            if (identical(g$sync_group_id %||% g$group_id, group_id)) g$applied_sample_id else NULL
+          }), use.names = FALSE))
+        }
+      }
+      ids <- intersect(ids, names(reg))
+      unique(c(active_sample_id(), ids))
+    }
+
+    preload_contexts <- function(gates, active_id) {
+      if (!isTRUE(shared$params$plot_cache_enabled()) || !isTRUE(shared$params$plot_preload_enabled()) || is.null(active_id)) return(list())
+      reg <- shared$fcs$registry()
+      ids <- preload_sample_ids(gates, active_id)
+      left_id <- flowjo_gate_parent_id(gates, active_id)
+      left_axis <- gates[[active_id]]
+      right_axis_id <- right_axis_template_gate_id() %||% right_axis_source_gate_id(gates, active_id, active_entry()) %||% active_id
+      right_axis <- gates[[right_axis_id]]
+      out <- list()
+      for (sid in ids) {
+        entry <- reg[[sid]]
+        if (is.null(entry)) next
+        target <- if (identical(sid, active_sample_id())) list(gate_id = active_id) else sample_gate_switch_target(gates, active_id, sid)
+        target_id <- target$gate_id %||% active_id
+        target_left_id <- flowjo_gate_parent_id(gates, target_id)
+        if (!is.null(left_axis)) out[[length(out) + 1L]] <- list(type = "plot", entry = entry, gate_id = target_left_id, x = left_axis$x_channel, y = left_axis$y_channel)
+        if (!is.null(right_axis)) out[[length(out) + 1L]] <- list(type = "plot", entry = entry, gate_id = target_id, x = right_axis$x_channel, y = right_axis$y_channel)
+        out[[length(out) + 1L]] <- list(type = "counts", entry = entry, gate_id = target_id)
+      }
+      # Agent note: Warm the visible layer across samples first, then every sample's
+      # own gate layers. Never evaluate another sample's gate as a fallback layer.
+      for (sid in ids) {
+        entry <- reg[[sid]]
+        if (is.null(entry)) next
+        for (gid in names(gates)) {
+          gate <- gates[[gid]]
+          if (!isTRUE(flowjo_gate_applicability(entry, gate, gates)$ok)) next
+          if (is.null(gate$x_channel) || is.null(gate$y_channel)) next
+          out[[length(out) + 1L]] <- list(type = "plot", entry = entry,
+            gate_id = flowjo_gate_parent_id(gates, gid), x = gate$x_channel, y = gate$y_channel)
+          axis_id <- right_axis_source_gate_id(gates, gid, entry) %||% gid
+          axis <- gates[[axis_id]]
+          if (!is.null(axis$x_channel) && !is.null(axis$y_channel)) {
+            out[[length(out) + 1L]] <- list(type = "plot", entry = entry,
+              gate_id = gid, x = axis$x_channel, y = axis$y_channel)
+          }
+        }
+      }
+      if (!length(out)) return(out)
+      keys <- vapply(out, preview_context_key, character(1), gates = gates)
+      out[!duplicated(keys)]
+    }
+
+    preload_signature <- function(contexts, gates) {
+      digest::digest(list(
+        contexts = sort(vapply(contexts, preview_context_key, character(1), gates = gates)),
+        scope = shared$params$plot_preload_scope()
+      ), algo = "xxhash64")
+    }
+
+    preload_label <- function(done, total, final = FALSE) {
+      scope <- isolate(shared$params$plot_preload_scope())
+      if (isTRUE(final)) return("Gating plots and counts are ready")
+      current <- max(1L, min(as.integer(done) + 1L, as.integer(total)))
+      if (identical(scope, "grouped")) return(sprintf("Preparing grouped gating data %d of %d", current, total))
+      if (identical(scope, "current")) return(sprintf("Preparing current-sample gating data %d of %d", current, total))
+      sprintf("Preparing gating data %d of %d across loaded samples", current, total)
+    }
+
+    close_preload_progress <- function() {
+      if (!is.null(preload_progress_handle)) {
+        try(preload_progress_handle$close(), silent = TRUE)
+        preload_progress_handle <<- NULL
+      }
+    }
+
+    session$onSessionEnded(close_preload_progress)
+
+    show_preload_notification <- function(done, total) {
+      if (!isTRUE(gating_tab_active())) {
+        close_preload_progress()
+        return(invisible(FALSE))
+      }
+      if (is.null(preload_progress_handle)) preload_progress_handle <<- shiny::Progress$new(session, min = 0, max = 1, style = "notification")
+      preload_progress_handle$set(
+        value = min(1, max(0, as.numeric(done %||% 0L) / max(1, as.numeric(total %||% 1L)))),
+        message = "Preparing gating data in the background",
+        detail = preload_label(done, total)
+      )
+      invisible(TRUE)
+    }
+
+    refresh_preload_queue <- function(gates, active_id, notify_ready = FALSE) {
+      enabled <- isTRUE(shared$params$plot_cache_enabled()) && isTRUE(shared$params$plot_preload_enabled())
+      if (!enabled || is.null(active_id)) {
+        old <- preload_state()
+        preload_state(modifyList(old, list(generation = as.integer(old$generation %||% 0L) + 1L, signature = NULL, queue = list(), total = 0L, done = 0L, failed = 0L, failed_keys = character(), protected_keys = character())))
+        close_preload_progress()
+        return(0L)
+      }
+      contexts <- preload_contexts(gates, active_id)
+      signature <- preload_signature(contexts, gates)
+      context_keys <- vapply(contexts, preview_context_key, character(1), gates = gates)
+      old <- preload_state()
+      failed_keys <- if (identical(old$signature, signature)) old$failed_keys %||% character() else character()
+      missing_idx <- !vapply(contexts, preload_context_is_cached, logical(1), gates = gates) & !context_keys %in% failed_keys
+      missing <- contexts[missing_idx]
+      if (identical(old$signature, signature)) {
+        old$queue <- missing
+        old$protected_keys <- context_keys
+        old$total <- max(as.integer(old$total %||% 0L), as.integer(old$done %||% 0L) + length(missing))
+        preload_state(old)
+      } else {
+        close_preload_progress()
+        preload_state(list(generation = as.integer(old$generation %||% 0L) + 1L, signature = signature, queue = missing, total = length(missing), done = 0L, failed = 0L, failed_keys = character(), protected_keys = context_keys))
+      }
+      if (isTRUE(notify_ready) && length(contexts) && !length(missing)) {
+        close_preload_progress()
+      }
+      length(missing)
+    }
+
+    request_preload_queue <- function(gates, active_id, announce = FALSE) {
+      missing <- refresh_preload_queue(gates, active_id, notify_ready = announce)
+      if (missing > 0L) {
+        st <- preload_state()
+        show_preload_notification(st$done, st$total)
+      }
+      invisible(missing)
+    }
+
+    send_preview_messages <- function(msgs) {
+      app_trace("send preview messages count=", length(msgs), .prefix = "[gating-ready]")
+      # Agent note: Only the current left-canvas draw may release the foreground overlay.
+      # Server payload completion alone does not mean the browser has drawn the plot.
+      if (isTRUE(foreground_preview_overlay_visible)) {
+        foreground_preview_generation <<- foreground_preview_generation + 1L
+        foreground_preview_ready_token <<- as.character(foreground_preview_generation)
+      }
+      for (msg in msgs) {
+        if (isTRUE(foreground_preview_overlay_visible) &&
+            identical(msg$payload$id, session$ns("canvas_wrap_left"))) {
+          msg$payload$readyInput <- session$ns("gate_canvas_ready")
+          msg$payload$readyToken <- foreground_preview_ready_token
+        }
+        session$sendCustomMessage(msg$name, msg$payload)
+      }
+    }
+
+    active_foreground_contexts <- function(gates, active_id) {
+      entry <- active_entry()
+      if (is.null(entry) || is.null(active_id)) return(list())
+      left_id <- flowjo_gate_parent_id(gates, active_id)
+      left_axis <- gates[[active_id]]
+      right_axis_id <- right_axis_template_gate_id() %||% right_axis_source_gate_id(gates, active_id, entry) %||% active_id
+      right_axis <- gates[[right_axis_id]]
+      out <- list(list(type = "counts", entry = entry, gate_id = active_id))
+      if (!is.null(left_axis)) out[[length(out) + 1L]] <- list(type = "plot", entry = entry, gate_id = left_id, x = left_axis$x_channel, y = left_axis$y_channel)
+      if (!is.null(right_axis)) out[[length(out) + 1L]] <- list(type = "plot", entry = entry, gate_id = active_id, x = right_axis$x_channel, y = right_axis$y_channel)
+      out
+    }
+
+    prepare_active_preview <- function(gates, active_id) {
+      active_sample_gate_stats(active_entry(), gates)
+      gating_preview_ready(TRUE)
+      preview_payload_messages(gates, active_id)
+    }
+
+    gating_tab_active <- function() {
+      identical(shiny::isolate(shared$session$input$main_nav) %||% NULL, "gating_tab")
+    }
+
+    hide_foreground_preview_overlay <- function(wait_for_canvas = FALSE) {
+      if (isTRUE(foreground_preview_overlay_visible)) {
+        if (isTRUE(wait_for_canvas) && !is.null(foreground_preview_ready_token)) return(invisible(NULL))
+        overlay_hide(session = session)
+        foreground_preview_ready_token <<- NULL
+        foreground_preview_overlay_visible <<- FALSE
+      }
+      invisible(NULL)
+    }
+
+    observeEvent(input$gate_canvas_ready, {
+      token <- input$gate_canvas_ready$token
+      if (!is.null(foreground_preview_ready_token) &&
+          identical(token, foreground_preview_ready_token)) hide_foreground_preview_overlay()
+    }, ignoreInit = TRUE)
+
+    schedule_foreground_preview <- function(gates, active_id) {
+      if (!isTRUE(gating_tab_active())) return(invisible(FALSE))
+      contexts <- active_foreground_contexts(gates, active_id)
+      missing <- length(contexts) && any(!vapply(contexts, preload_context_is_cached, logical(1), gates = gates))
+      if (length(contexts) && (!isTRUE(shiny::isolate(gating_preview_ready())) || isTRUE(missing))) {
+        gating_preview_ready(FALSE)
+        foreground_preview_ready_token <<- NULL
+        if (!isTRUE(foreground_preview_overlay_visible)) {
+          foreground_preview_overlay_visible <<- TRUE
+          overlay_show(
+            "Preparing gating page...",
+            tip = "Preparing the active sample's plots and population counts.",
+            progress = "indeterminate",
+            session = session
+          )
+        }
+      }
+      if (isTRUE(foreground_preview_scheduled) || isTRUE(foreground_preview_running)) return(invisible(TRUE))
+      foreground_preview_scheduled <<- TRUE
+      session$sendCustomMessage("flowjo-gating-pending", list(pending = TRUE))
+      # Agent note: The overlay must reach the browser before canvas payload construction; deferring the heavy work by one event-loop turn prevents a blank, unprotected gating page.
+      session$onFlushed(function() {
+        later::later(function() {
+          # Agent note: Deferred preview work needs isolation as well as a session
+          # domain; its readiness checks, payloads, and preload queue read reactive state.
+          shiny::withReactiveDomain(session, shiny::isolate({
+            foreground_preview_scheduled <<- FALSE
+            if (!isTRUE(gating_tab_active())) {
+              gating_preview_ready(FALSE)
+              hide_foreground_preview_overlay()
+              return(invisible(NULL))
+            }
+            foreground_preview_running <<- TRUE
+            tryCatch({
+              current_gates <- shared$gating$gates()
+              current_id <- ensure_active_preview_gate(current_gates)
+              msgs <- prepare_active_preview(current_gates, current_id)
+              request_preload_queue(current_gates, current_id)
+              send_preview_messages(msgs)
+              st <- preload_state()
+              if (length(st$queue) && isTRUE(gating_tab_active())) {
+                show_preload_notification(st$done, st$total)
+              }
+            }, error = function(e) {
+              foreground_preview_ready_token <<- NULL
+              gating_preview_ready(FALSE)
+              session$sendCustomMessage("flowjo-gating-pending", list(pending = FALSE))
+              message("[gating-ready] foreground preview failed: ", conditionMessage(e))
+              showNotification(
+                paste("Gating preview could not be prepared:", conditionMessage(e)),
+                type = "error",
+                duration = 10
+              )
+            }, finally = {
+              foreground_preview_running <<- FALSE
+              hide_foreground_preview_overlay(wait_for_canvas = TRUE)
+            })
+            invisible(NULL)
+          }))
+        }, delay = 0)
+      }, once = TRUE)
+      invisible(TRUE)
+    }
+
+    observeEvent(shared$session$input$main_nav, {
+      if (!isTRUE(gating_tab_active())) {
+        close_preload_progress()
+        gating_preview_ready(FALSE)
+        hide_foreground_preview_overlay()
+      }
+    }, ignoreInit = FALSE)
+
     observe({
+      # Agent note: Track navigation here; the isolated helper cannot wake preparation after leaving clears readiness.
+      if (!identical(shared$session$input$main_nav, "gating_tab")) return()
+      app_trace("tab observer start", .prefix = "[gating-ready]")
       gates <- shared$gating$gates()
       if (isTRUE(skip_next_gate_payload())) {
         skip_next_gate_payload(FALSE)
+        app_trace("skipped next gate payload", .prefix = "[gating-ready]")
         return()
       }
       active_id <- ensure_active_preview_gate(gates)
+      app_trace(
+        "active_id=", active_id %||% "<none>",
+        " gates=", length(gates),
+        " active_sample=", shared$fcs$active_id() %||% "<none>",
+        .prefix = "[gating-ready]"
+      )
       if (!is.null(active_id) && is.null(gates[[active_id]])) {
         shared$gating$active_gate_id(NULL)
         active_plot("right")
+        app_trace("active gate missing; reset to right plot", .prefix = "[gating-ready]")
         return()
       }
-      msgs <- preview_payload_messages(gates, active_id)
-      session$onFlushed(function() send_preview_messages(msgs), once = TRUE)
+      contexts <- active_foreground_contexts(gates, active_id)
+      app_trace("foreground contexts=", length(contexts), .prefix = "[gating-ready]")
+      schedule_foreground_preview(gates, active_id)
     })
 
     observeEvent(active_plot(), {
@@ -1820,35 +2807,101 @@ gating_page_server <- function(id, shared) {
     }, ignoreInit = TRUE)
 
     observeEvent(input$gate_canvas_request, {
+      app_trace("canvas request", .prefix = "[gating-ready]")
       gates <- shared$gating$gates()
       active_id <- ensure_active_preview_gate(gates)
+      app_trace("canvas active_id=", active_id %||% "<none>", " gates=", length(gates), .prefix = "[gating-ready]")
       if (!is.null(active_id) && is.null(gates[[active_id]])) {
         shared$gating$active_gate_id(NULL)
         active_plot("right")
+        app_trace("canvas active gate missing; reset", .prefix = "[gating-ready]")
         return()
       }
-      msgs <- preview_payload_messages(gates, active_id)
-      session$onFlushed(function() send_preview_messages(msgs), once = TRUE)
+      contexts <- active_foreground_contexts(gates, active_id)
+      app_trace("canvas foreground contexts=", length(contexts), .prefix = "[gating-ready]")
+      schedule_foreground_preview(gates, active_id)
     }, ignoreInit = TRUE)
+
+    observeEvent(shared$ui$plot_preload_request(), {
+      if (!isTRUE(gating_tab_active())) return()
+      gates <- shared$gating$gates()
+      active_id <- ensure_active_preview_gate(gates)
+      if (!isTRUE(shiny::isolate(gating_preview_ready()))) {
+        schedule_foreground_preview(gates, active_id)
+        return()
+      }
+      request_preload_queue(gates, active_id, announce = TRUE)
+    }, ignoreInit = TRUE)
+
+    observe({
+      st <- preload_state()
+      if (!length(st$queue)) return()
+      if (!isTRUE(gating_tab_active())) {
+        close_preload_progress()
+        return()
+      }
+      invalidateLater(60, session)
+      generation <- st$generation
+      signature <- st$signature
+      ctx <- st$queue[[1]]
+      st$queue <- st$queue[-1]
+      gates <- shared$gating$gates()
+      ctx_key <- preview_context_key(ctx, gates)
+      err_msg <- NULL
+      ok <- tryCatch({
+        if (identical(ctx$type %||% "plot", "counts")) {
+          active_sample_gate_stats(ctx$entry, gates)
+        } else {
+          preview_data_for_context(ctx$entry, ctx$gate_id, ctx$x, ctx$y, gates)
+        }
+        TRUE
+      }, error = function(e) {
+        err_msg <<- conditionMessage(e)
+        FALSE
+      })
+      st$done <- st$done + 1L
+      if (!isTRUE(ok)) {
+        st$failed <- st$failed + 1L
+        st$failed_keys <- unique(c(st$failed_keys %||% character(), ctx_key))
+        message(sprintf(
+          "[gating-preload] type=%s sample=%s gate=%s x=%s y=%s failed: %s",
+          ctx$type %||% "plot",
+          ctx$entry$id %||% "<unknown>",
+          ctx$gate_id %||% "root",
+          ctx$x %||% "<null>",
+          ctx$y %||% "<null>",
+          err_msg %||% "unknown error"
+        ))
+      }
+      current <- isolate(preload_state())
+      if (!identical(current$generation, generation) || !identical(current$signature, signature)) return()
+      show_preload_notification(st$done, st$total)
+      done <- !length(st$queue)
+      preload_state(st)
+      if (done) {
+        close_preload_progress()
+        if (isTRUE(gating_tab_active())) {
+          if (st$failed > 0L) {
+            showNotification(sprintf("Gating background preparation finished with %d failed context%s.", st$failed, if (st$failed == 1L) "" else "s"), type = "warning", duration = 8, id = "gating_cache_warning")
+          } else {
+            showNotification(preload_label(st$done, st$total, TRUE), type = "message", duration = 3)
+          }
+        }
+      }
+    })
 
     observeEvent(input$gate_canvas_activate, {
       plot <- input$gate_canvas_activate$plot %||% "right"
       if (plot %in% c("left", "right")) {
         current_plot <- active_plot()
+        axis_debug("[gating-axis] activate requested=%s current=%s focus=%s selected=%s active_gate=%s",
+          plot,
+          current_plot %||% "<null>",
+          plot_focus_gate_id(plot) %||% "<root>",
+          canvas_selected_gate() %||% "<none>",
+          shared$gating$active_gate_id() %||% "<none>"
+        )
         if (!identical(plot, current_plot)) {
-          current_pair <- plot_axis_pair(current_plot)
-          if (!is.null(current_pair$x) || !is.null(current_pair$y)) plot_axes[[current_plot]] <- current_pair
-          displayed_pair <- displayed_plot_axes[[plot]]
-          if (!is.null(displayed_pair$x) || !is.null(displayed_pair$y)) {
-            existing_pair <- plot_axes[[plot]]
-            if (!identical(existing_pair, displayed_pair)) plot_axes[[plot]] <- displayed_pair
-            axes <- view_axes()
-            axis_key <- view_axis_key(plot, plot_focus_gate_id(plot))
-            if (!identical(axes[[axis_key]], displayed_pair)) {
-              axes[[axis_key]] <- displayed_pair
-              view_axes(axes)
-            }
-          }
           active_plot(plot)
         }
         parent_id <- plot_focus_gate_id(plot) %||% "root"
@@ -1898,9 +2951,57 @@ gating_page_server <- function(id, shared) {
       session$onFlushed(function() send_preview_messages(msgs), once = TRUE)
     }, ignoreInit = TRUE)
 
+    switch_preview_sample <- function(target_sid) {
+      gates <- shared$gating$gates()
+      source_plot <- isolate(active_plot())
+      gid <- displayed_population_gate_id(gates)
+      target <- sample_gate_switch_target(gates, gid, target_sid)
+      if (is.null(target)) return(FALSE)
+      template <- gates[[target$template_id %||% ""]]
+      active_sample_override(target_sid)
+      shared$fcs$set_active(target_sid)
+      updateSelectInput(session, "sample_id", selected = target_sid)
+      next_gid <- if (identical(source_plot, "left")) {
+        target_entry <- shared$fcs$registry()[[target_sid]]
+        right_axis_source_gate_id(gates, target$gate_id, target_entry)
+      } else NULL
+      landing_gid <- next_gid %||% target$gate_id
+      reset_right_axis_override(landing_gid)
+      right_axis_template_gate_id(if (is.null(next_gid)) target$template_id else NULL)
+      shared$gating$active_gate_id(landing_gid)
+      canvas_selected_gate(landing_gid)
+      active_plot(if (!is.null(next_gid)) "left" else "right")
+      if (!is.null(template)) {
+        session$onFlushed(function() {
+          updateTextInput(session, "gate_name", value = template$name %||% "")
+          updateRadioButtons(session, "gate_type", selected = template$type %||% "rectangle")
+          updateSelectInput(session, "x_channel", selected = template$x_channel)
+          if (!is.null(template$y_channel)) updateSelectInput(session, "y_channel", selected = template$y_channel)
+        }, once = TRUE)
+      }
+      TRUE
+    }
+
+    observeEvent(shared$ui$gating_sample_request(), {
+      if (!isTRUE(gating_tab_active())) return()
+      sid <- shared$ui$gating_sample_request()$sample_id
+      if (is.null(sid) || is.null(shared$fcs$registry()[[sid]])) return()
+      if (identical(sid, active_sample_id())) return()
+      if (!isTRUE(switch_preview_sample(sid))) {
+        # Clear the prior sample's gate; preview initialization chooses an applicable gate for this sample.
+        active_sample_override(sid)
+        shared$fcs$set_active(sid)
+        shared$gating$active_gate_id(NULL)
+        canvas_selected_gate(NULL)
+        right_axis_template_gate_id(NULL)
+        updateSelectInput(session, "sample_id", selected = sid)
+        active_plot("left")
+      }
+    }, ignoreInit = TRUE, priority = 100)
+
     preview_nav <- function(dir) {
       gates <- shared$gating$gates()
-      gid <- shared$gating$active_gate_id()
+      gid <- displayed_population_gate_id(gates)
       sid <- active_sample_id()
       if (identical(dir, "left")) {
         pid <- flowjo_gate_parent_id(gates, gid)
@@ -1918,27 +3019,11 @@ gating_page_server <- function(id, shared) {
           active_plot("right")
         }
       } else if (identical(dir, "up")) {
-        prev_sid <- flowjo_prev_next_sample(shared$fcs$registry(), gates, gid, sid, -1L)
-        if (!is.null(prev_sid)) {
-          peer_id <- flowjo_gate_peer_id(gates, gid, prev_sid)
-          shared$fcs$set_active(prev_sid)
-          updateSelectInput(session, "sample_id", selected = prev_sid)
-          if (!is.null(peer_id)) {
-            reset_right_axis_override(peer_id)
-            shared$gating$active_gate_id(peer_id)
-          }
-        }
+        prev_sid <- prev_next_preview_sample(gates, gid, sid, -1L)
+        if (!is.null(prev_sid)) switch_preview_sample(prev_sid)
       } else if (identical(dir, "down")) {
-        next_sid <- flowjo_prev_next_sample(shared$fcs$registry(), gates, gid, sid, 1L)
-        if (!is.null(next_sid)) {
-          peer_id <- flowjo_gate_peer_id(gates, gid, next_sid)
-          shared$fcs$set_active(next_sid)
-          updateSelectInput(session, "sample_id", selected = next_sid)
-          if (!is.null(peer_id)) {
-            reset_right_axis_override(peer_id)
-            shared$gating$active_gate_id(peer_id)
-          }
-        }
+        next_sid <- prev_next_preview_sample(gates, gid, sid, 1L)
+        if (!is.null(next_sid)) switch_preview_sample(next_sid)
       }
     }
 
@@ -1968,14 +3053,14 @@ gating_page_server <- function(id, shared) {
 
     output$nav_toolbar <- renderUI({
       gates <- shared$gating$gates()
-      gid <- shared$gating$active_gate_id()
+      gid <- displayed_population_gate_id(gates)
       sid <- active_sample_id()
       reg <- shared$fcs$registry()
       parent_id <- flowjo_gate_parent_id(gates, gid)
       child_ids <- if (is.null(gid)) flowjo_gate_children(gates, "root") else flowjo_gate_children(gates, gid)
       child_id <- if (length(child_ids)) child_ids[[1]] else NULL
-      prev_sid <- flowjo_prev_next_sample(reg, gates, gid, sid, -1L)
-      next_sid <- flowjo_prev_next_sample(reg, gates, gid, sid, 1L)
+      prev_sid <- prev_next_preview_sample(gates, gid, sid, -1L)
+      next_sid <- prev_next_preview_sample(gates, gid, sid, 1L)
       btn <- function(id, icon_name, title, enabled) {
         actionButton(session$ns(id), icon(icon_name), title = title,
           class = paste("btn btn-outline-secondary btn-sm gate-nav-icon", if (isTRUE(enabled)) "" else "disabled"))
@@ -2000,30 +3085,18 @@ gating_page_server <- function(id, shared) {
 
     observeEvent(input$nav_prev_sample, {
       gates <- shared$gating$gates()
-      gid <- shared$gating$active_gate_id()
-      sid <- flowjo_prev_next_sample(shared$fcs$registry(), gates, gid, active_sample_id(), -1L)
+      gid <- displayed_population_gate_id(gates)
+      sid <- prev_next_preview_sample(gates, gid, active_sample_id(), -1L)
       if (!is.null(sid)) {
-        peer_id <- flowjo_gate_peer_id(gates, gid, sid)
-        shared$fcs$set_active(sid)
-        updateSelectInput(session, "sample_id", selected = sid)
-        if (!is.null(peer_id)) {
-          reset_right_axis_override(peer_id)
-          shared$gating$active_gate_id(peer_id)
-        }
+        switch_preview_sample(sid)
       }
     }, ignoreInit = TRUE)
     observeEvent(input$nav_next_sample, {
       gates <- shared$gating$gates()
-      gid <- shared$gating$active_gate_id()
-      sid <- flowjo_prev_next_sample(shared$fcs$registry(), gates, gid, active_sample_id(), 1L)
+      gid <- displayed_population_gate_id(gates)
+      sid <- prev_next_preview_sample(gates, gid, active_sample_id(), 1L)
       if (!is.null(sid)) {
-        peer_id <- flowjo_gate_peer_id(gates, gid, sid)
-        shared$fcs$set_active(sid)
-        updateSelectInput(session, "sample_id", selected = sid)
-        if (!is.null(peer_id)) {
-          reset_right_axis_override(peer_id)
-          shared$gating$active_gate_id(peer_id)
-        }
+        switch_preview_sample(sid)
       }
     }, ignoreInit = TRUE)
     observeEvent(input$nav_parent_gate, {
@@ -2061,8 +3134,12 @@ gating_page_server <- function(id, shared) {
           span(class = "gate-nav-meta", sprintf("%s events", format(e$cells %||% nrow(e$df), big.mark = ",")))
         )
       }
+      seen_group_samples <- character()
       group_blocks <- lapply(names(groups), function(gid) {
         g <- groups[[gid]]
+        visible_sample_ids <- (g$sample_ids %||% character())
+        visible_sample_ids <- visible_sample_ids[visible_sample_ids %in% names(reg) & !visible_sample_ids %in% seen_group_samples]
+        seen_group_samples <<- c(seen_group_samples, visible_sample_ids)
         div(class = "gate-nav-group",
           div(
             class = "gate-nav-row gate-nav-group-head",
@@ -2070,10 +3147,10 @@ gating_page_server <- function(id, shared) {
             span(class = "gate-nav-name", icon("folder"), " ", g$name %||% gid),
             span(class = "gate-nav-meta", sprintf("%d samples", length(g$sample_ids %||% character())))
           ),
-          lapply(g$sample_ids %||% character(), function(id) if (!is.null(reg[[id]])) sample_row(id, TRUE))
+          lapply(visible_sample_ids, function(id) sample_row(id, TRUE))
         )
       })
-      grouped_ids <- unique(unlist(lapply(groups, function(g) g$sample_ids %||% character()), use.names = FALSE))
+      grouped_ids <- seen_group_samples
       ungrouped <- setdiff(names(reg), grouped_ids)
       div(class = "gate-nav-section",
         group_blocks,
@@ -2084,6 +3161,7 @@ gating_page_server <- function(id, shared) {
     observeEvent(input$navigator_sample_select, {
       sid <- input$navigator_sample_select
       if (nzchar(sid %||% "")) {
+        active_sample_override(sid)
         shared$fcs$set_active(sid)
         updateSelectInput(session, "sample_id", selected = sid)
       }
@@ -2104,13 +3182,14 @@ gating_page_server <- function(id, shared) {
       sid <- active_sample_id()
       if (is.null(sid)) return(div(class = "gate-nav-empty", "No active sample."))
       selected <- navigator_selected_gates()
+      displayed_gate_id <- displayed_population_gate_id(gates)
       row_for <- function(id, depth = 0L) {
         g <- gates[[id]]
         st <- gate_stat_row(sid, id)
         status <- gate_status(sid, id)
         avail <- gate_available(sid, id)
         cls <- paste("gate-nav-row gate-nav-gate",
-          if (identical(id, shared$gating$active_gate_id())) "active" else "",
+          if (identical(id, displayed_gate_id)) "active" else "",
           if (id %in% selected) "selected" else "",
           if (!avail) "disabled" else "",
           if (identical(status, "synced")) "synced" else "")
@@ -2137,7 +3216,7 @@ gating_page_server <- function(id, shared) {
         div(class = "gate-nav-row gate-nav-header",
           span("Gate"), span("Type"), span("Count"), span("% Parent"), span("Status"), span(""), span("")
         ),
-        div(class = paste("gate-nav-row gate-nav-root", if (is.null(shared$gating$active_gate_id())) "active" else ""),
+        div(class = paste("gate-nav-row gate-nav-root", if (is.null(displayed_gate_id)) "active" else ""),
           onclick = sprintf("Shiny.setInputValue('%s','root',{priority:'event'});", session$ns("select_gate")),
           span(class = "gate-tree-name", icon("home"), " Root"), span("--"), span("--"), span("--"), span("available"), span(""), span("")
         ),
@@ -2429,17 +3508,17 @@ gating_page_server <- function(id, shared) {
 
     output$count_table <- DT::renderDataTable({
       stats <- active_sample_stats()
+      gates <- shared$gating$gates()
       if (!nrow(stats)) {
         e <- active_entry()
-        req(e)
-        gates <- shared$gating$gates()
+        req(e, cancelOutput = TRUE)
         gid <- canvas_selected_gate() %||% shared$gating$active_gate_id()
         if (is.null(gid) || is.null(gates[[gid]])) gid <- if (length(gates)) names(gates)[[1]] else NULL
         gate <- if (is.null(gid)) NULL else gates[[gid]]
         if (is.null(gate)) {
           geom <- current_geometry()
           channels <- current_draft_channels()
-          req(geom, channels$x, channels$y)
+          req(geom, channels$x, channels$y, cancelOutput = TRUE)
           gate <- flowjo_make_gate(
             name = trimws(input$gate_name %||% "Current gate"),
             type = input$gate_canvas_draft$type %||% input$gate_type,
@@ -2470,7 +3549,29 @@ gating_page_server <- function(id, shared) {
           stringsAsFactors = FALSE
         )
       }
-      selected_gate <- canvas_selected_gate() %||% shared$gating$active_gate_id() %||% ""
+      all_stat_gate_ids <- unique(as.character(stats$gate_id))
+      collapsed <- intersect(collapsed_count_gates(), names(gates))
+      if (length(collapsed) && nrow(stats)) {
+        is_hidden_by_collapsed_parent <- function(gid) {
+          gate <- gates[[gid]]
+          if (is.null(gate)) return(FALSE)
+          parent_id <- gate$parent_id %||% "root"
+          seen <- character()
+          while (length(parent_id) && !identical(parent_id, "root") && !(parent_id %in% seen)) {
+            if (parent_id %in% collapsed) return(TRUE)
+            seen <- c(seen, parent_id)
+            parent <- gates[[parent_id]]
+            parent_id <- if (is.null(parent)) "root" else parent$parent_id %||% "root"
+          }
+          FALSE
+        }
+        keep <- !vapply(stats$gate_id, is_hidden_by_collapsed_parent, logical(1))
+        stats <- stats[keep, , drop = FALSE]
+      }
+      # Agent note: Highlight the current gate, not the parent population of the
+      # active canvas. Include sample identity because imported gate IDs are shared.
+      selected_gate <- canvas_selected_gate() %||% preview_focus_gate_id(gates) %||% ""
+      selected_sample <- active_sample_id() %||% ""
       gate_label <- function(i) {
         nm <- htmltools::htmlEscape(stats$gate_name[[i]] %||% stats$gate_id[[i]])
         axes_vals <- c(stats$gate_x[[i]] %||% "", stats$gate_y[[i]] %||% "")
@@ -2483,16 +3584,39 @@ gating_page_server <- function(id, shared) {
           stats$gate_status[[i]] %||% ""
         )
         gid <- stats$gate_id[[i]]
-        color <- stats$gate_color[[i]] %||% "#2563EB"
-        input_id <- session$ns(paste0("gate_color_", gid))
+        color <- toupper(trimws(as.character(stats$gate_color[[i]] %||% "#2563EB")))
+        if (!grepl("^#[0-9A-F]{6}$", color)) color <- "#2563EB"
+        foldable <- !identical(gid, "draft") && length(intersect(flowjo_gate_children(gates, gid), all_stat_gate_ids)) > 0L
+        collapsed_here <- gid %in% collapsed
+        fold_control <- if (foldable) {
+          fold_title <- if (collapsed_here) "Expand child gates" else "Collapse child gates"
+          sprintf(
+            "<button type='button' class='gate-count-toggle' data-gate-id='%s' aria-expanded='%s' title='%s'>%s</button>",
+            htmltools::htmlEscape(gid),
+            if (collapsed_here) "false" else "true",
+            htmltools::htmlEscape(fold_title),
+            if (collapsed_here) "▸" else "▾"
+          )
+        } else {
+          "<span class='gate-count-toggle-spacer' aria-hidden='true'></span>"
+        }
+        color_control <- if (identical(gid, "draft")) {
+          "<span class='gate-count-color-spacer' aria-hidden='true'></span>"
+        } else {
+          sprintf(
+            "<button type='button' class='gate-count-color-button' data-gate-id='%s' style='--gate-color:%s' title='Choose gate color' aria-label='Choose color for %s'></button>",
+            htmltools::htmlEscape(gid),
+            htmltools::htmlEscape(color),
+            htmltools::htmlEscape(stats$gate_name[[i]] %||% gid)
+          )
+        }
         sprintf(
-          "<div class='gate-count-tree-cell' style='--gate-depth:%d;--gate-color:%s' title='%s'><input id='%s' class='gate-count-color-input' type='color' value='%s' onchange=\"Shiny.setInputValue(this.id,this.value,{priority:'event'});\" %s><span class='gate-count-tree-name'>%s</span><span class='gate-count-tree-axes'>%s</span>%s</div>",
+          "<div class='gate-count-tree-cell' style='--gate-depth:%d;--gate-color:%s' title='%s'>%s%s<span class='gate-count-tree-name'>%s</span><span class='gate-count-tree-axes'>%s</span>%s</div>",
           as.integer(stats$gate_depth[[i]] %||% 0L),
           htmltools::htmlEscape(color),
           htmltools::htmlEscape(paste(na.omit(c(stats$gate_name[[i]], axes, status)), collapse = " · ")),
-          htmltools::htmlEscape(input_id),
-          htmltools::htmlEscape(color),
-          if (identical(gid, "draft")) "disabled" else "",
+          fold_control,
+          color_control,
           nm,
           axes,
           if (nzchar(status)) sprintf("<span class='gate-count-tree-status'>%s</span>", htmltools::htmlEscape(status)) else ""
@@ -2507,35 +3631,67 @@ gating_page_server <- function(id, shared) {
         Percent = round(stats$percent_parent, 2),
         gate_id = stats$gate_id,
         sample_id = stats$sample_id,
-        selected = ifelse(nzchar(selected_gate) & stats$gate_id == selected_gate, "true", "false"),
+        selected = ifelse(nzchar(selected_gate) & stats$gate_id == selected_gate & stats$sample_id == selected_sample, "true", "false"),
         check.names = FALSE
+      )
+      active_gate_id <- displayed_population_gate_id(gates)
+      current_sample_id <- active_sample_id()
+      count_prev_sid <- prev_next_preview_sample(gates, active_gate_id, current_sample_id, -1L)
+      count_next_sid <- prev_next_preview_sample(gates, active_gate_id, current_sample_id, 1L)
+      count_nav_html <- paste0(
+        "<div class='gate-count-sample-nav' aria-label='Sample navigation'>",
+        if (!is.null(count_prev_sid)) "<button type='button' class='btn btn-light btn-sm gate-preview-arrow gate-count-sample-arrow' data-direction='previous' title='Previous sample' aria-label='Previous sample'><i class='fas fa-chevron-up' role='presentation'></i></button>" else "",
+        if (!is.null(count_next_sid)) "<button type='button' class='btn btn-light btn-sm gate-preview-arrow gate-count-sample-arrow' data-direction='next' title='Next sample' aria-label='Next sample'><i class='fas fa-chevron-down' role='presentation'></i></button>" else "",
+        "</div>"
       )
       DT::datatable(
         counts,
         class = "stripe hover compact gate-count-table",
         options = list(
-          pageLength = 8,
-          lengthMenu = c(8, 15, 25, 50),
+          paging = FALSE,
+          lengthChange = FALSE,
+          scrollY = "420px",
+          scrollCollapse = FALSE,
           autoWidth = FALSE,
           columnDefs = list(
             list(targets = c(3, 4, 5), className = "dt-body-right dt-head-right"),
             list(targets = c(6, 7, 8), visible = FALSE, searchable = FALSE)
-          )
+          ),
+          rowCallback = DT::JS("function(row, data) { var selected = data && (data[8] === true || ['true', 'TRUE', '1', 'yes', 'Yes'].indexOf(String(data[8])) >= 0); $(row).toggleClass('gate-count-current', !!selected).attr('aria-current', selected ? 'true' : null); }")
         ),
         callback = DT::JS(sprintf("
-          table.on('draw', function() {
-            table.rows().every(function() {
-              var data = this.data();
-              var isSelected = !!data && (data[8] === true || ['true', 'TRUE', '1', 'yes', 'Yes'].indexOf(String(data[8])) >= 0);
-              $(this.node()).toggleClass('gate-count-selected selected active', isSelected);
-              $('td', this.node()).css({
-                backgroundColor: isSelected ? 'rgba(24, 119, 242, 0.14)' : '',
-                boxShadow: isSelected ? 'inset 3px 0 0 rgba(24, 119, 242, 0.75)' : ''
-              });
-            });
-          });
-          table.on('click', 'tbody input.gate-count-color-input', function(event) {
+          var wrapper = $(table.table().container());
+          // Agent note: Keep all population rows in one bounded scroll body;
+          // paging hides the gate tree and makes cross-gate comparison painful.
+          wrapper.addClass('gate-count-table-wrapper');
+          var scrollBody = wrapper.find('.dataTables_scrollBody');
+          if (scrollBody.length) {
+            scrollBody[0].classList.add('Pinhki-bounded-scroll', 'Pinhki-scroll-fade');
+            scrollBody[0].dispatchEvent(new Event('scroll'));
+          }
+          wrapper.off('click.gateCountFold').on('click.gateCountFold', 'button.gate-count-toggle', function(event) {
+            event.preventDefault();
             event.stopPropagation();
+            Shiny.setInputValue('%s', {gate_id: this.getAttribute('data-gate-id'), nonce: Math.random()}, {priority: 'event'});
+          });
+          wrapper.off('click.gateCountColor').on('click.gateCountColor', 'button.gate-count-color-button', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            Shiny.setInputValue('%s', {gate_id: this.getAttribute('data-gate-id'), nonce: Math.random()}, {priority: 'event'});
+          });
+          var filter = wrapper.find('.dataTables_filter');
+          if (filter.length && !wrapper.find('.gate-count-sample-nav').length) {
+            filter.addClass('gate-count-filter');
+            filter.wrap('<div class=\"gate-count-filter-tools\"></div>');
+            filter.before(%s);
+          }
+          var tools = wrapper.find('.gate-count-filter-tools');
+          var header = wrapper.closest('.gate-count-card').find('.gate-count-header-tools');
+          if (header.length && tools.length) header.empty().append(tools);
+          header.off('click.gateCountSampleNav').on('click.gateCountSampleNav', '.gate-count-sample-arrow', function() {
+            var direction = $(this).data('direction');
+            var inputId = direction === 'previous' ? '%s' : '%s';
+            Shiny.setInputValue(inputId, {nonce: Math.random()}, {priority: 'event'});
           });
           table.on('dblclick', 'tbody tr', function() {
             var data = table.row(this).data();
@@ -2543,11 +3699,21 @@ gating_page_server <- function(id, shared) {
             Shiny.setInputValue('%s', {gate_id: data[6], sample_id: data[7], nonce: Math.random()}, {priority: 'event'});
           });
           table.draw(false);
-        ", session$ns("count_table_open"))),
+        ",
+          session$ns("count_gate_toggle"),
+          session$ns("count_gate_color_open"),
+          jsonlite::toJSON(count_nav_html, auto_unbox = TRUE),
+          session$ns("count_prev_sample"),
+          session$ns("count_next_sample"),
+          session$ns("count_table_open")
+        )),
         escape = FALSE,
         rownames = FALSE
       )
     })
+
+    observeEvent(input$count_prev_sample, preview_nav("up"), ignoreInit = TRUE)
+    observeEvent(input$count_next_sample, preview_nav("down"), ignoreInit = TRUE)
 
     observeEvent(input$count_table_open, {
       msg <- input$count_table_open
@@ -2557,6 +3723,7 @@ gating_page_server <- function(id, shared) {
       reg <- shared$fcs$registry()
       if (!nzchar(gid) || identical(gid, "draft") || is.null(gates[[gid]])) return()
       if (nzchar(sid) && !is.null(reg[[sid]])) {
+        active_sample_override(sid)
         shared$fcs$set_active(sid)
         updateSelectInput(session, "sample_id", selected = sid)
       }

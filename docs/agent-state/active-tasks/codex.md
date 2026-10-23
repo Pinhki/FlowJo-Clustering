@@ -1,16 +1,78 @@
 # Active Task - codex
 
 Last Updated:
-2026-07-06
+2026-08-26
 
 Task ID:
 flowjo-ui-polish-2026-06-20
 
 Task:
-Reorganize Analysis / Clustering workflow around named Analysis Objects and named runs.
+Corrected workflow: review basket populations -> Analysis Object -> named analysis runs -> population export. Concatenation is downstream only.
 
 Current Status:
 in progress
+
+## Follow-up - 2026-10-11 (reviewed analysis inputs)
+
+Implemented per-object population checklists with sample/path/count, empty-selection guard, unchanged basket state, and saved input provenance. Root/all events remains an explicit source. Removed upstream batch creation. Navigation now puts Population Export after Cluster and Feature Plots; export selects object/run/clusters and optional per-sample cluster cap without preprocessing.
+
+Validation: scripts/check_analysis_review.R verifies reviewed inputs, provenance, blocked empty/stale selections and batch bypass, plus downstream cluster-only export and optional cap. Modified R files parse. Live modal/navigation appearance remains to be checked after app restart.
+
+Files: shared_store.R, page_umap_flowsom.R, page_gating_concat.R, component_navbar.R, scripts/check_analysis_review.R.
+
+## Follow-up - 2026-10-10 (Gating plot/export policy)
+
+## Follow-up - 2026-10-11 (WSP coordinates and labels)
+
+Status: importer now restores compensated raw events and inverse-transforms sample-specific gate geometry before canvas applies WSP transforms. Labels use 55% white backgrounds and bounded overlap-reducing placement.
+
+Evidence: real Cytek WSP import returned CD8/CD4 gate bounds 8.364–236.984 and 0.590–256.977, while source XML bounds are -2536–1516306 and -3379–4184554. This confirms the previous double transformation. R coordinate round-trip and Node label/export checks pass.
+
+Next action: restart and re-import WSP; visually verify geometry and label placement. Previously imported workspaces retain old coordinates.
+
+Risk: broad existing uncommitted edits; source tests do not establish live browser appearance.
+
+### Previous plot/export policy
+
+Status: implemented; R tick and Node export/density contract checks passed.
+
+Files: `Contents/R/interface/page_gating.R`, `Contents/www/gating_canvas.js`, `Contents/www/global.css`, and focused check scripts.
+
+Evidence: `docs/agent-state/findings/gating-plot-policy-2026-10-10.md`.
+
+Next action: live app check of axis labels, resizing, square frames, and native SVG/PNG downloads. Existing-Chrome bridge unavailable (mcporter missing).
+
+## Follow-up - 2026-10-10 (WSP recovery workflow)
+
+Status: implemented; targeted tests and real mapped Cytek import passed.
+
+Files: `Contents/R/interface/page_import_export.R`, `Contents/R/global/wsp_helpers.R`, `scripts/check_wsp_file_resolution.R`.
+
+Evidence: `docs/agent-state/findings/wsp-file-recovery-2026-10-10.md`.
+
+Next action: restart app; verify native missing-file picker, top result card, responsive widths, and Gating with the imported workspace. CytoML's differing-tree warning still requires app validation.
+
+## Follow-up - 2026-10-10 (resumption review)
+
+Objective: Recover last focus and unresolved work.
+
+Status: review complete; source unchanged.
+
+Evidence: `docs/agent-state/findings/project-resumption-2026-10-10.md`.
+
+Next action: Real-data Shiny validation of WSP import/gating, histogram, cache/sample navigation, workspace restore, and named clustering runs. Export round-trip requires available export support.
+
+Risk: broad existing uncommitted changes; historical checks are not fresh runtime verification.
+
+## Follow-up - 2026-08-29 (busy overlay alignment)
+
+Task: Keep FlowJo busy overlay text/status content left-aligned while the main app moves meme media to explicit fun-action use and removes ASCII media.
+
+Status: implemented; R/rendered-contract and JavaScript checks passed.
+
+Files: `Contents/www/global.css`; shared canonical stylesheet updated at `/Users/rongzhenyu/Downloads/R_pipeline/shared_shiny_style/Pinhki-shiny-style.css`.
+
+Remaining: optional live browser visual check after receiving current Shiny URL and port.
 
 Current Branch:
 main
@@ -46,6 +108,12 @@ Files In Scope:
 - .project-index/shiny_pages.csv only when Shiny page routing is relevant
 
 Latest Progress:
+- Applied compact Cluster UI notes explaining FlowJo, WSP, and user-entered settings; kept the existing control-note layout and clarified that run settings are reused by the heatmap.
+- Added a regular FlowJo biexponential transformation choice to the named Cluster workflow. The option calls `flowWorkspace::flowjo_biexp()` event-by-event, preserves compensated negatives, uses imported WSP marker settings when available, stores explicit fallback parameters in each run, and lets the heatmap/3D upgrade reuse the same transform. Existing flowCore Logicle, arcsinh, none, and separate clustering scaling remain available.
+- Added the Cluster Composition card between UMAP and Heatmap: synchronized Group/Split controls, static stacked/alluvial modes, percentage/count metrics, full-cluster abundance/numeric ordering, shared run colors, saved aesthetics, and one-row faceting for split panels.
+- Promoted the muted DT pagination palette from the Counts-only selector to every DT table and mirrored it into the shared Pinhki stylesheet; the single-cell app had sizing but no pagination color override.
+- Updated Cluster UX: Analysis Object, computed-run, and imported-run names now receive editable timestamp defaults with collision suffixes; the marker checkbox list is now a compact DT multi-select table with marker/channel/robust-range details, technical-channel badges, quick selection controls, and per-object remembered selections.
+- Fixed missing/mis-spaced canvas biex tick labels: server tick generation now starts from the visible transformed canvas range, inverse-maps only its endpoints to determine raw decades, then applies the exact active transform to each raw power; client range filtering was reverted so raw labels stay paired with server positions.
 - Implemented Analysis Object state in shared store with named object creation from FCS or batch concatenation, immutable named runs, active object/run selection, workspace persistence, and analysis bundle import/export.
 - Reworked Analysis / Clustering nav to Feature Plots, Cluster, and Batch Concatenation; removed standalone FlowSOM from the menu and moved compute/import FlowSOM paths into Cluster pill tabs.
 - Replaced Batch Concatenation's visible clustering controls with an Analysis Handoff card that creates a named Analysis Object and jumps to Cluster.
@@ -170,8 +238,14 @@ Latest Progress:
 - Workspace UX checkpoint: Workspace now warms gate stats for all visible loaded samples/gates on page render, shows gate name/stats/sync state in one compact row, supports checkbox multi-select gate dragging to group rows, and labels group rows as drop targets with clearer sync on/off badges.
 - Replaced Workspace group color text entry with staged Single Cell Motion picker popup; group color saves from normalized hex after Apply.
 - Synced/group-owned gate tree identity uses group-colored badges/text only; local/shared style contract now prohibits stripes/accent bars for cards, notes, and gate trees.
+- Added Gating preview plot-cache controls: Settings now persists project-local JSON defaults in `local_settings/flowjo_settings.json`, exposes cache/preload/event-limit options, and the Gating canvas plus background preload share one keyed in-session LRU cache path.
+- Updated sample switching/preload behavior so unsynced child editing anchors on the nearest synced parent and matches target child peers by exact name/type/x/y axes before falling back to parent context.
 
 Next Action:
+- Browser-check the Gating in-plot pending state: uncached changes should dim the previous canvas after 140 ms, pulse plot-like points with `Preparing plot\u2026`, cached changes should not flash, and stale payload generations must not clear newer pending states.
+- Browser-check the generation-safe Gating cache with a large workspace: foreground plot/count work must use the busy overlay, background plot/count preload must use one native Shiny progress notification, and repeated sibling/sample switching must reuse memberships without restarting the queue.
+- Verify first/middle/last sample navigation after each server-driven switch; it must expose both directions where applicable and never wrap.
+- Browser-check the Gating Settings performance controls with real grouped samples: cache on/off, 75k event limit, preload scope, green progress notification, and unsynced child sample switching.
 - Browser-check Import / Export workspace save/load with real loaded FCS samples: sidebar shortcut, save overlay/download, load overlay, replace confirmation, cancel path, accepted restore, and preserved `auto_scale_settings`.
 - Test histogram behavior specifically: it is not yet user-verified and should open on the current plot/view, not the whole population, while dynamically adapting range when biex parameters change.
 - Before new source reads, prefer current git diff and this task file over rediscovery.
@@ -194,6 +268,7 @@ Success Criteria:
 - R source parses after touched-file changes.
 
 Known Risks:
+- The new plot, membership, and count cache paths parse successfully but still need an interactive multi-sample Shiny run to confirm timing, progress replacement, and numerical parity with direct membership calculations.
 - This is a conservative routing rule: it checks for any existing gate tree or imported WSP report, not a deeper semantic notion of "advanced gating" in raw FCS metadata.
 - Feature plot legend placement is inside the plotting panel, but multiple facet/patchwork panels may still affect the final rendered density.
 - Worktree has broad pre-existing uncommitted changes across AGENTS.md, project index files, app/global/run files, navbar, custom CSS, and sidebar.
@@ -204,3 +279,100 @@ Known Risks:
 - Tightened axis modal tick density/margins/scrolling and made unavailable Navigator gate rows non-interactive.
 - Checks passed: touched R parse, `node --check Contents/www/gating_canvas.js`, `scripts/check_gating_helpers.R`, WSP import smoke on Cytek `All Sync` (9 samples/38 populations), one-file real-FCS export smoke, Shiny HTTP startup.
 - Remaining: browser-level interactive smoke with real FCS upload/draw/basket/export/cluster; Playwright MCP was unavailable because browser binaries are not installed.
+
+2026-07-12 Update:
+- Workspace route loading now always starts the global busy overlay for a navigation, ignores stale waits, and cancels the wait when leaving Workspace.
+
+2026-08-04 Update:
+- Population Counts now keeps a bounded, transparent-fade scroll body with local gate-tree collapse state; fold buttons hide descendants without mutating shared gate data.
+- Replaced native HTML color inputs in count rows with the reusable Motion single-color picker modal; Apply updates the existing gate color/sync contract.
+- Checks passed: `page_gating.R` parse, scoped `git diff --check`, and synthetic `shiny::testServer` smoke for fold toggles/color-picker events.
+- Workspace loading also runs on the initial active route and closes any stale Gating progress when the route changes away from Gating; completion notifications remain Gating-only.
+
+2026-07-12 Cluster split/grid update:
+- Cluster run data now restores row metadata from the Analysis Object for older run snapshots and falls back to editable `sample_id`/`sample_name` values when no metadata exists; new FCS objects carry sample/source/keyword fields and batch metadata remains intact.
+- Split choices are computed once per renderer, and the preview/split control grids explicitly suppress Bootstrap clearfix pseudo-cells so the three/two-column layouts remain aligned after dropdown sizing changes.
+- Color by and both split selectors now share one three-column control row; dynamic facet fields are injected as ggplot symbols so selected sample/gate/keyword splits produce real panels after Update plot.
+- Split selections now update the applied plot structure immediately. Raw-FCS objects expose a display-only Gate name split when stored memberships match the object rows, expanding overlapping/nested gates into their own panels without changing saved clustering data; batch objects continue using their existing gate metadata columns.
+- FCS import now retains the scalar keyword list from each `flowCore` frame for downstream split-by discovery; technical numeric channels remain excluded from clustering markers.
+- Checks passed: focused split metadata selection smoke and R parse for `page_umap_flowsom.R` and `shared_store.R`.
+- The Workspace loading wait reasserts the overlay if a late page message hides it before the tree and details outputs are ready.
+- Gating preload progress is guarded inside the notification helper and route observer, so a late background update cannot expose or leave the native progress bar while another page is active.
+- Checks passed: `Contents/app.R` and `Contents/R/interface/page_gating.R` R parse.
+
+2026-08-03 WSP import/export smoke:
+- Current Box fixture imported successfully through `flowjo_wsp_import_report()` with both `execute = FALSE` and `execute = TRUE`: group `pLN`, 4 samples, and 16 population paths.
+- `flowjo_wsp_export_report()` reached CytoML but could not create a temporary WSP because the local Docker daemon is not running; the helper returned the error cleanly.
+- `flowWorkspace::save_gs()` confirmed the export prerequisite: `execute = FALSE` fails to stage the GatingSet, while `execute = TRUE` stages 11 entries successfully.
+- Import / Export now imports WSP data with `execute = TRUE` and exposes an `Export WSP` download control after a usable report, with Docker/local-binary guidance on runtime failure.
+- Next action: complete the real download round-trip after Docker is started.
+
+2026-08-03 Reference folder picker:
+- Replaced the hard-coded/manual reference path workflow with a `shinyFiles` folder selector that exposes Home, common user folders, detected Cloud Storage providers, iCloud Drive, and mounted volumes as named roots.
+- The selected folder remains visible in the path field, and selecting a new folder clears stale inventory before scanning.
+- Added `shinyFiles` to both app package bootstrap lists; UI generation and resource-path smoke checks passed.
+
+2026-08-03 WSP selection and nested inventory:
+- Fixed CytoML import for concatenated WSPs whose samples have empty gate trees by enabling `include_empty_tree = TRUE`; the reported Cytek fixture now imports 2 samples and the root population.
+- Reference inventory is recursive and the Import / Export page now shows a WSP dropdown using relative paths, so users can choose among multiple workspace files.
+- The selected reference root is passed to import for child-folder FCS resolution, and rescanning clears stale WSP report/export state.
+- Checks passed: exact Cytek WSP import, recursive inventory, and page parse; actual WSP export still needs Docker.
+
+2026-08-03 WSP URI precedence:
+- The intended full Cytek WSP records nine absolute FCS paths under `Unmixed`; recursive search from the parent collided with same-name `Raw` files.
+- Added WSP `DataSet uri` parsing and directory resolution so valid recorded paths take precedence over recursive basename matching.
+- Exact import now resolves `/Unmixed` and passes: 9 samples, 118 populations, no error.
+
+2026-08-03 WSP-only import control:
+- Replaced the confusing folder-first import UI with a single `Select WSP file` control; users choose the actual `.wsp` file and then click `Import WSP Report`.
+- The selected WSP path is retained for reporting, while recorded dataset URIs determine the associated FCS directory when available.
+- Checks passed: WSP-only page/helper parse and `git diff --check`.
+
+2026-08-03 WSP reference table scope:
+- The table was still using the parent-folder recursive inventory, which exposed sibling WSP files after a selection.
+- Added a selected-WSP reference inventory containing only that WSP and its recorded FCS dataset URIs; unique fallback matching is used only when a recorded path is unavailable.
+- Cytek fixture check passed: 1 WSP + 9 FCS rows, all nine resolved under `Unmixed`, with sibling WSPs excluded.
+
+2026-08-03 WSP module runtime fix:
+- The WSP export-control renderer used `ns()` inside the server module without binding `ns <- session$ns`, producing the reported `could not find function "ns"` error after selection/import.
+- Added the module namespace binding; `shiny::testServer()` now passes for both the pre-import state and a usable WSP report export control.
+
+2026-08-03 WSP full recheck:
+- Exact Cytek fixture passed again: 9 recorded URI references, 1 selected WSP + 9 FCS table rows, all FCS paths under `Unmixed`, 9 samples, and 118 populations.
+- Page/helper parse, `shiny::testServer()` empty/usable export states, shinyFiles package bootstrap lookup, and `git diff --check` all passed.
+- Export helper reached CytoML and returned the expected environment error because Docker is not running; no code-path error was observed.
+
+2026-08-03 WSP report-only integration gap:
+- The successful WSP report is currently stored only in `shared$gating$wsp_report`.
+- The normal sample registry, active raw data, app gate tree, and memberships are not populated from the imported GatingSet, so Workspace, Gating, and analysis pages remain empty after WSP import.
+- Do not describe WSP import as fully wired into the rest of the app until a GatingSet-to-app-state adapter is implemented.
+
+2026-08-03 WSP app-state integration:
+- Added a GatingSet adapter that loads root event data into the shared FCS registry, converts FlowJo polygon/rectangle gates into app gates, and preserves exact per-sample FlowJo memberships for statistics.
+- The WSP import observer now applies those entries, gates, memberships, and a sample group to shared state while retaining the original report/GatingSet for export.
+- Exact page observer smoke passed: selecting the Cytek WSP and importing produced 9 registered samples, 117 non-root gates, and the WSP report output.
+
+2026-08-04 Gating readiness and preload:
+- Deferred active-sample gating preparation until after the Shiny flush so the global busy overlay is visible before count/plot work begins; readiness-guarded stats stay blank behind that overlay until the active payload is sent.
+- Changed the default preload scope from all loaded samples to the current sample; all-sample preparation remains an explicit optional background setting.
+- Removed the WSP import handler's eager all-sample gate recomputation because the adapter already provides exact memberships; the Gating cache reuses those memberships for the active sample.
+- WSP import itself now runs after the import overlay flushes. Parse checks and a focused deferred Gating smoke test passed.
+
+2026-08-04 Population count scrolling:
+- Replaced Population Counts pagination with a bounded DataTables scroll body while retaining search and row interactions.
+- The scroll body carries the shared `Pinhki-bounded-scroll` + `Pinhki-scroll-fade` contract so the transparent gradient follows actual scroll position.
+
+2026-08-04 Compensation library/editor:
+- Added a persistent named compensation library to the shared store; each FCS entry keeps its assigned matrix ID and current matrix, while repeated WSP matrices deduplicate by signature.
+- Added safe assign/update/reset/delete operations, original-matrix preservation, preprocessing invalidation after edits, marker/channel remapping, workspace save/load persistence, and compensation IDs in preprocessing results.
+- Replaced the read-only compensation table with a compact editor, duplicate-for-editing workflow, multi-sample assignment control, and a 6,000-event debounced before/after scatter preview.
+- WSP export now remaps app marker-space matrices back to each GatingSet's native detector channels before applying current assignments; the Cytek fixture export-preparation smoke passed for all 9 matrices.
+- Checks passed: shared-state library/edit/assign/reset, compensation module smoke, cell-edit smoke, real WSP library/save-load smoke, export compensation mapping, R parse, and scoped `git diff --check`.
+
+2026-08-04 WSP metadata wiring:
+- Added exact FlowJo WSP biexponential transforms to the per-entry and shared transform slots; XML linear transforms are retained for FSC/SSC-style channels, with inverse support for axis previews and canvas geometry.
+- The adapter now stores WSP workspace/sample/group/population metadata, recorded FCS paths, per-sample gate geometry, exact memberships, FlowJo compensation matrices mapped to app markers, and group/population display metadata.
+- Imported WSP gate edits update the active sample's WSP geometry slot so overlays do not snap back to the original coordinates.
+- Selected full Cytek WSP fixture passed: 9 samples, 117 gates, 2 sample groups, 117 populations, 58 transform keys (raw + marker aliases), 26x26 compensation, all nine recorded `/Unmixed` paths existing, exact FlowJo transform error 0, and all gate membership lists populated.
+- WSP population nodes in this file do not contain unique `gating:id` attributes; deterministic app gate IDs plus full WSP population paths remain the stable references.
+- Next action: run the app-level import/gating smoke after restart and complete export round-trip when Docker/local FlowJo export support is available.

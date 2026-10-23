@@ -3,6 +3,7 @@
 
   const state = new Map();
   const palette = ["#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c", "#0891b2", "#be123c"];
+  const pendingTimers = new Map();
 
   function finite(v) { return Number.isFinite(Number(v)); }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -39,7 +40,17 @@
     }
     if (s.drag) return s;
     payload.polygon = asPoints(payload.polygon || []);
+    wrap.removeAttribute("data-flowjo-canvas-ready");
+    if (points) points.removeAttribute("data-flowjo-canvas-ready");
+    if (overlay) overlay.removeAttribute("data-flowjo-canvas-ready");
+    wrap.removeAttribute("data-flowjo-canvas-ready-token");
+    if (points) points.removeAttribute("data-flowjo-canvas-ready-token");
+    if (overlay) overlay.removeAttribute("data-flowjo-canvas-ready-token");
     const previousPayload = s.payload;
+    if (payload.pointDataUnchanged && previousPayload) {
+      // Agent note: Gate-only server updates omit large point arrays; retain the last point layer while applying fresh overlays and counts.
+      for (const key of ["x", "y", "marker", "group", "groupColors"]) payload[key] = previousPayload[key];
+    }
     const previousPointKey = pointLayerKey(previousPayload);
     s.payload = payload;
     const resized = sizeCanvases(s);
@@ -47,8 +58,51 @@
     else draw(s);
     scheduleCanvasRemeasure();
     updateCursor(s);
+    wrap.setAttribute("data-flowjo-canvas-ready", "true");
+    points.setAttribute("data-flowjo-canvas-ready", "true");
+    overlay.setAttribute("data-flowjo-canvas-ready", "true");
+    const readyToken = window.FlowJoCanvasReadyTokens && window.FlowJoCanvasReadyTokens[payload.id];
+    if (readyToken) {
+      wrap.setAttribute("data-flowjo-canvas-ready-token", readyToken);
+      points.setAttribute("data-flowjo-canvas-ready-token", readyToken);
+      overlay.setAttribute("data-flowjo-canvas-ready-token", readyToken);
+    }
+    clearPending(wrap);
+    // Agent note: Acknowledge this payload after drawing; the server rejects stale tokens.
+    if (payload.readyInput && payload.readyToken && window.Shiny) {
+      const readyInput = payload.readyInput;
+      const readyToken = payload.readyToken;
+      requestAnimationFrame(function () {
+        window.Shiny.setInputValue(readyInput, { token: readyToken }, { priority: "event" });
+      });
+    }
     return s;
   }
+
+  function clearPending(wrap) {
+    if (!wrap) return;
+    const timer = pendingTimers.get(wrap.id);
+    if (timer) clearTimeout(timer);
+    pendingTimers.delete(wrap.id);
+    wrap.classList.remove("is-plot-pending");
+    const pending = wrap.querySelector(".Pinhki-plot-pending");
+    if (pending) pending.setAttribute("aria-hidden", "true");
+  }
+
+  function queuePending(wrap) {
+    if (!wrap || wrap.classList.contains("blank")) return;
+    const oldTimer = pendingTimers.get(wrap.id);
+    if (oldTimer) clearTimeout(oldTimer);
+    const timer = setTimeout(() => {
+      pendingTimers.delete(wrap.id);
+      if (!wrap.isConnected) return;
+      wrap.classList.add("is-plot-pending");
+      const pending = wrap.querySelector(".Pinhki-plot-pending");
+      if (pending) pending.setAttribute("aria-hidden", "false");
+    }, 140);
+    pendingTimers.set(wrap.id, timer);
+  }
+
 
   function retrySetup(payload) {
     const tries = payload._tries || 0;
@@ -58,11 +112,20 @@
 
   function sizeCanvases(s, force) {
     const rect = s.wrap.getBoundingClientRect();
-    const w = Math.max(1, Math.round(rect.width || s.wrap.offsetWidth || 1));
-    const h = Math.max(1, Math.round(rect.height || s.wrap.offsetHeight || 1));
+    // Agent note: The app shell is visually scaled; rect dimensions already include
+    // that scale and would be scaled a second time when assigned as CSS pixels.
+    const w = Math.max(1, Math.round(s.wrap.offsetWidth || rect.width || 1));
+    const h = Math.max(1, Math.round(s.wrap.offsetHeight || rect.height || 1));
     const dpr = window.devicePixelRatio || 1;
-    const next = { w, h, ml: 58, mr: 18, mt: 58, mb: 46 };
-    if (!force && s.box && s.box.w === next.w && s.box.h === next.h && s.dpr === dpr) return false;
+    // Agent note: Tick labels and the rotated title need separate horizontal space,
+    // including when an axis update changes label widths without resizing the card.
+    const measure = s.points.getContext("2d");
+    measure.font = "13px system-ui, sans-serif";
+    const labels = axisTicks(s.payload, "y").labels;
+    const tickWidth = Math.max(0, ...labels.map(label => measure.measureText(String(label || "")).width));
+    const ml = s.payload.hideAxisText ? 58 : Math.max(58, Math.ceil(tickWidth) + 42);
+    const next = { w, h, ml, mr: 18, mt: 58, mb: 46 };
+    if (!force && s.box && s.box.w === next.w && s.box.h === next.h && s.box.ml === next.ml && s.dpr === dpr) return false;
     for (const c of [s.points, s.overlay]) {
       c.width = Math.max(1, Math.floor(w * dpr));
       c.height = Math.max(1, Math.floor(h * dpr));
@@ -129,6 +192,14 @@
     const r = s.payload.ranges.y;
     return s.box.h - s.box.mb - (Number(y) - r[0]) / (r[1] - r[0] || 1) * (s.box.h - s.box.mt - s.box.mb);
   }
+  function eventXScale(s, x) {
+    const r = s.payload.ranges.x;
+    return xScale(s, clamp(Number(x), r[0], r[1]));
+  }
+  function eventYScale(s, y) {
+    const r = s.payload.ranges.y;
+    return yScale(s, clamp(Number(y), r[0], r[1]));
+  }
   function xData(s, px) {
     const r = s.payload.ranges.x;
     return r[0] + (px - s.box.ml) / (s.box.w - s.box.ml - s.box.mr || 1) * (r[1] - r[0]);
@@ -176,7 +247,8 @@
       if (p.mode === "gate") col = groupColor(p, p.group && p.group[i]);
       ctx.fillStyle = col;
       ctx.globalAlpha = p.mode === "dot" ? 0.35 : 0.65;
-      ctx.fillRect(xScale(s, p.x[i]), yScale(s, p.y[i]), 1.6, 1.6);
+      // Agent note: Events outside a fixed viewport accumulate at its edge; gate geometry deliberately continues to use unclamped xScale/yScale.
+      ctx.fillRect(eventXScale(s, p.x[i]), eventYScale(s, p.y[i]), 1.6, 1.6);
     }
     ctx.globalAlpha = 1;
   }
@@ -186,8 +258,9 @@
     const p = s.payload;
     const plotW = s.box.w - s.box.ml - s.box.mr;
     const plotH = s.box.h - s.box.mt - s.box.mb;
-    const nx = clamp(Math.floor(plotW / 2), 260, 720);
-    const ny = clamp(Math.floor(plotH / 2), 260, 720);
+    // Agent note: Density bins are fixed in data space so resizing/export cannot change density normalization.
+    const nx = 512;
+    const ny = 512;
     const bins = new Uint32Array(nx * ny);
     for (let i = 0; i < p.x.length; i++) {
       if (!finite(p.x[i]) || !finite(p.y[i])) continue;
@@ -212,7 +285,7 @@
           ctx.fillStyle = ramp(t);
           ctx.globalAlpha = 0.9;
         }
-        ctx.fillRect(s.box.ml + xi * pw, s.box.h - s.box.mb - (yi + 1) * ph, Math.ceil(pw), Math.ceil(ph));
+        ctx.fillRect(s.box.ml + xi * pw, s.box.h - s.box.mb - (yi + 1) * ph, pw, ph);
       }
     }
     ctx.globalAlpha = 1;
@@ -230,70 +303,91 @@
     ctx.fillStyle = "#111827";
     ctx.font = "13px system-ui, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(p.labels.x || "", (b.w + b.ml - b.mr) / 2, b.h - 12);
+    if (!p.hideAxisText) ctx.fillText(axisTitle(p, "x"), (b.w + b.ml - b.mr) / 2, b.h - 12);
     ctx.save();
     ctx.translate(16, (b.h + b.mt - b.mb) / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText(p.labels.y || "", 0, 0);
+    if (!p.hideAxisText) ctx.fillText(axisTitle(p, "y"), 0, 0);
     ctx.restore();
     ctx.font = "11px system-ui, sans-serif";
+    ctx.strokeStyle = "#9ca3af";
+    ctx.lineWidth = 0.75;
     for (const tx of axisTicks(p, "x").minor) {
-      ctx.textAlign = "center";
       const px = xScale(s, tx);
+      if (px < b.ml || px > b.w - b.mr) continue;
+      ctx.textAlign = "center";
       ctx.beginPath();
       ctx.moveTo(px, b.h - b.mb);
       ctx.lineTo(px, b.h - b.mb + 4);
       ctx.stroke();
     }
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 1.5;
     axisTicks(p, "x").major.forEach((tx, i) => {
-      ctx.textAlign = "center";
       const px = xScale(s, tx);
+      if (px < b.ml || px > b.w - b.mr) return;
+      const label = axisTicks(p, "x").labels[i] ?? fmt(tx);
       ctx.beginPath();
       ctx.moveTo(px, b.h - b.mb);
       ctx.lineTo(px, b.h - b.mb + 7);
       ctx.stroke();
-      ctx.fillText(axisTicks(p, "x").labels[i] || fmt(tx), px, b.h - b.mb + 18);
+      const halfLabel = ctx.measureText(label).width / 2;
+      const labelX = clamp(px, b.ml + halfLabel + 2, b.w - b.mr - halfLabel - 2);
+      ctx.textAlign = "center";
+      if (!p.hideAxisText) ctx.fillText(label, labelX, b.h - b.mb + 18);
     });
+    ctx.strokeStyle = "#9ca3af";
+    ctx.lineWidth = 0.75;
     for (const ty of axisTicks(p, "y").minor) {
-      ctx.textAlign = "right";
       const py = yScale(s, ty);
+      if (py < b.mt || py > b.h - b.mb) continue;
+      ctx.textAlign = "right";
       ctx.beginPath();
       ctx.moveTo(b.ml, py);
       ctx.lineTo(b.ml - 4, py);
       ctx.stroke();
     }
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 1.5;
     axisTicks(p, "y").major.forEach((ty, i) => {
-      ctx.textAlign = "right";
       const py = yScale(s, ty);
-      if (py <= b.mt + 8) return;
+      if (py < b.mt || py > b.h - b.mb) return;
+      ctx.textAlign = "right";
+      const label = axisTicks(p, "y").labels[i] ?? fmt(ty);
       ctx.beginPath();
       ctx.moveTo(b.ml, py);
       ctx.lineTo(b.ml - 7, py);
       ctx.stroke();
-      ctx.fillText(axisTicks(p, "y").labels[i] || fmt(ty), b.ml - 9, py + 4);
+      if (!p.hideAxisText) ctx.fillText(label, b.ml - 9, clamp(py + 4, b.mt + 9, b.h - b.mb - 2));
     });
   }
 
   function drawOverlay(s) {
     const ctx = s.overlay.getContext("2d");
     ctx.clearRect(0, 0, s.box.w, s.box.h);
-    for (const g of s.payload.gates || []) drawGate(s, ctx, g, g.id === s.payload.selected);
-    if (s.draft) drawGate(s, ctx, s.draft, true, true);
+    s.labelBoxes = [];
+    // Agent note: Gate selection is shared between panels; editing appearance belongs only to the active panel.
+    const active = !!s.wrap.closest?.(".gate-history-plot.active");
+    for (const g of s.payload.gates || []) drawGate(s, ctx, g, active && g.id === s.payload.selected);
+    if (active && s.draft) drawGate(s, ctx, s.draft, true, true);
     const poly = s.payload.polygon || [];
-    if (poly.length) drawPolyPoints(s, ctx, poly);
+    if (active && poly.length) drawPolyPoints(s, ctx, poly);
   }
 
   function drawGate(s, ctx, gate, selected, draft) {
     const g = gate.geometry || {};
+    // Agent note: Inactive geometry must not cover axes/titles. Selected gates
+    // retain their outside handles for editing; labels are positioned separately.
+    const clipped = !selected && !draft;
+    ctx.save();
+    if (clipped) {
+      ctx.beginPath();
+      ctx.rect(s.box.ml, s.box.mt, s.box.w - s.box.ml - s.box.mr, s.box.h - s.box.mt - s.box.mb);
+      ctx.clip();
+    }
     ctx.strokeStyle = draft ? "#1d4ed8" : (gate.color || "#e56789");
     ctx.fillStyle = ctx.strokeStyle;
     ctx.lineWidth = selected ? 3.6 : 1.4;
-    if (selected && !draft) {
-      ctx.shadowColor = gate.color || "#2563eb";
-      ctx.shadowBlur = 10;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-    }
     ctx.beginPath();
     if (gate.type === "rectangle" || gate.type === "range") {
       const x1 = xScale(s, g.xmin), x2 = xScale(s, g.xmax);
@@ -314,7 +408,30 @@
     ctx.stroke();
     ctx.shadowBlur = 0;
     if (selected) handles(s, gate).forEach(h => square(ctx, h.px, h.py, 5));
+    ctx.restore();
     if (!draft) drawGateLabel(s, ctx, gate);
+  }
+
+  function repelGateLabel(s, preferredX, preferredY, w, h) {
+    // Agent note: Repel in display space only. Never move saved gate geometry or
+    // label anchors; recompute collision boxes on every draw and export.
+    const fit = (x, y) => ({x: clamp(x, s.box.ml + 2, Math.max(s.box.ml + 2, s.box.w - s.box.mr - w - 2)),
+      y: clamp(y, s.box.mt + 2, Math.max(s.box.mt + 2, s.box.h - s.box.mb - h - 2))});
+    const origin = fit(preferredX, preferredY);
+    let best = origin, bestScore = Infinity;
+    for (let radius = 0; radius <= 12; radius++) {
+      const offsets = radius ? [[0,-radius],[0,radius],[-radius,0],[radius,0],[-radius,-radius],[radius,-radius],[-radius,radius],[radius,radius]] : [[0,0]];
+      for (const [dx,dy] of offsets) {
+        const candidate = fit(origin.x + dx * (w + 8) / 3, origin.y + dy * (h + 8));
+        const overlap = (s.labelBoxes || []).reduce((sum, box) => sum +
+          Math.max(0, Math.min(candidate.x + w + 4, box.x + box.w + 4) - Math.max(candidate.x - 4, box.x - 4)) *
+          Math.max(0, Math.min(candidate.y + h + 4, box.y + box.h + 4) - Math.max(candidate.y - 4, box.y - 4)), 0);
+        const score = overlap * 1e6 + Math.hypot(candidate.x - origin.x, candidate.y - origin.y);
+        if (score < bestScore) { best = candidate; bestScore = score; }
+      }
+      if (bestScore < 1e6) break;
+    }
+    return best;
   }
 
   function drawGateLabel(s, ctx, gate) {
@@ -329,10 +446,11 @@
     const padX = 6, padY = 4, lineH = 15;
     const w = Math.max(...lines.map(line => ctx.measureText(line).width)) + padX * 2;
     const h = lines.length * lineH + padY * 2;
-    const x = clamp(p.px, s.box.ml + 2, s.box.w - s.box.mr - w - 2);
-    const y = clamp(p.py, s.box.mt + 2, s.box.h - s.box.mb - h - 2);
+    const placed = repelGateLabel(s, p.px, p.py, w, h);
+    const x = placed.x, y = placed.y;
     gate._labelBox = { x, y, w, h };
-    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    (s.labelBoxes || (s.labelBoxes = [])).push(gate._labelBox);
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
     ctx.strokeStyle = gate.color || "#e56789";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -354,6 +472,109 @@
     pts.forEach(v => square(ctx, xScale(s, v.x), yScale(s, v.y), 4));
     if (pts.length >= 3) ring(ctx, xScale(s, pts[0].x), yScale(s, pts[0].y), 7);
   }
+
+  // Agent note: Export reuses the live drawing functions; SVG records vector marks rather than embedding a canvas bitmap.
+  function svgContext(width, height) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("xmlns", ns);
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("width", width); svg.setAttribute("height", height);
+    const measure = document.createElement("canvas").getContext("2d");
+    let matrix = new DOMMatrix(), path = [], stack = [], clipId = null, clipCount = 0;
+    const ctx = { fillStyle: "black", strokeStyle: "black", globalAlpha: 1, lineWidth: 1,
+      font: "12px sans-serif", textAlign: "left", textBaseline: "alphabetic" };
+    function element(type, attrs, paint) {
+      const el = document.createElementNS(ns, type);
+      Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+      el.setAttribute("transform", matrix.toString());
+      el.setAttribute("opacity", ctx.globalAlpha);
+      el.setAttribute("fill", paint === "fill" ? ctx.fillStyle : "none");
+      if (paint === "stroke") { el.setAttribute("stroke", ctx.strokeStyle); el.setAttribute("stroke-width", ctx.lineWidth); }
+      if (clipId) el.setAttribute("clip-path", `url(#${clipId})`);
+      svg.appendChild(el); return el;
+    }
+    ctx.clearRect = () => {};
+    ctx.setTransform = (a,b,c,d,e,f) => { matrix = new DOMMatrix([a,b,c,d,e,f]); };
+    ctx.save = () => stack.push({matrix, clipId, fillStyle: ctx.fillStyle, strokeStyle: ctx.strokeStyle,
+      globalAlpha: ctx.globalAlpha, lineWidth: ctx.lineWidth, font: ctx.font, textAlign: ctx.textAlign, textBaseline: ctx.textBaseline});
+    ctx.restore = () => { const saved = stack.pop(); if (saved) { matrix = saved.matrix; clipId = saved.clipId; Object.assign(ctx, saved); } };
+    ctx.translate = (x,y) => { matrix = matrix.translate(x,y); };
+    ctx.rotate = angle => { matrix = matrix.rotate(angle * 180 / Math.PI); };
+    ctx.beginPath = () => { path = []; };
+    ctx.moveTo = (x,y) => path.push(`M ${x} ${y}`);
+    ctx.lineTo = (x,y) => path.push(`L ${x} ${y}`);
+    ctx.closePath = () => path.push("Z");
+    ctx.rect = (x,y,w,h) => path.push(`M ${x} ${y} h ${w} v ${h} h ${-w} Z`);
+    ctx.ellipse = (x,y,rx,ry) => path.push(`M ${x+rx} ${y} A ${rx} ${ry} 0 1 0 ${x-rx} ${y} A ${rx} ${ry} 0 1 0 ${x+rx} ${y} Z`);
+    ctx.arc = (x,y,r) => ctx.ellipse(x,y,r,r);
+    ctx.clip = () => {
+      const defs = document.createElementNS(ns, "defs");
+      const clip = document.createElementNS(ns, "clipPath");
+      clipId = `gate-clip-${++clipCount}`;
+      clip.setAttribute("id", clipId);
+      clip.setAttribute("clipPathUnits", "userSpaceOnUse");
+      const shape = document.createElementNS(ns, "path");
+      shape.setAttribute("d", path.join(" "));
+      shape.setAttribute("transform", matrix.toString());
+      clip.appendChild(shape); defs.appendChild(clip); svg.appendChild(defs);
+    };
+    ctx.stroke = () => element("path", {d: path.join(" ")}, "stroke");
+    ctx.fill = () => element("path", {d: path.join(" ")}, "fill");
+    ctx.fillRect = (x,y,w,h) => element("rect", {x,y,width:w,height:h}, "fill");
+    ctx.measureText = text => { measure.font = ctx.font; return measure.measureText(text); };
+    ctx.fillText = (text,x,y) => {
+      const el = element("text", {x,y, "text-anchor": ctx.textAlign === "center" ? "middle" : ctx.textAlign === "right" ? "end" : "start",
+        "dominant-baseline": ctx.textBaseline === "top" ? "text-before-edge" : "alphabetic"}, "fill");
+      el.style.font = ctx.font; el.textContent = text;
+    };
+    return {ctx, svg};
+  }
+
+  async function exportPlot(s, format, axisText) {
+    if (!s || !s.payload || !s.box || s.payload.blank) return;
+    const exported = Object.assign({}, s, {
+      // Agent note: Export gates in black without mutating the interactive palette.
+      payload: Object.assign({}, s.payload, {hideAxisText: !axisText, selected: null, polygon: [],
+        gates: (s.payload.gates || []).map(gate => Object.assign({}, gate, {color: "#000000"}))}),
+      draft: null
+    });
+    let blob;
+    if (format === "svg") {
+      const vector = svgContext(s.box.w, s.box.h);
+      exported.points = exported.overlay = {getContext: () => vector.ctx};
+      draw(exported);
+      blob = new Blob([new XMLSerializer().serializeToString(vector.svg)], {type: "image/svg+xml"});
+    } else {
+      const canvas = document.createElement("canvas");
+      const scale = 2048 / Math.max(s.box.w, s.box.h);
+      canvas.width = Math.round(s.box.w * scale); canvas.height = Math.round(s.box.h * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      exported.points = {getContext: () => ctx};
+      // Overlay clearing must not erase the exported point layer.
+      const overlay = new Proxy(ctx, {get(target, key) {
+        if (key === "clearRect") return () => {};
+        const value = target[key]; return typeof value === "function" ? value.bind(target) : value;
+      }, set(target, key, value) { target[key] = value; return true; }});
+      exported.overlay = {getContext: () => overlay};
+      draw(exported);
+      blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+    }
+    if (!blob) return;
+    const link = document.createElement("a"), url = URL.createObjectURL(blob);
+    const title = s.wrap.querySelector(".shiny-html-output");
+    const name = ((title && title.textContent) || s.payload.id || "gating-plot").trim().replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 120);
+    link.href = url; link.download = `${name}.${format}`;
+    link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  document.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-gate-export]");
+    if (!button) return;
+    const wrap = button.closest(".gate-canvas-wrap");
+    const preference = wrap.querySelector(".gate-export-axis-text");
+    exportPlot(state.get(wrap.id), button.dataset.gateExport, !preference || preference.checked);
+  });
 
   function bind(s) {
     s.overlay.addEventListener("pointerdown", e => pointerDown(s, e));
@@ -630,13 +851,20 @@
     for (let v = Math.ceil(lo / step) * step; v <= hi + step * 1e-9; v += step) out.push(Number(v.toPrecision(12)));
     return out;
   }
+  function axisTitle(p, axis) {
+    const title = p.labels[axis] || "";
+    const multiplier = p.ticks && p.ticks[axis] && p.ticks[axis].multiplier;
+    return multiplier ? title + " (" + multiplier + ")" : title;
+  }
   function axisTicks(p, axis) {
     const t = p.ticks && p.ticks[axis];
-    if (t && Array.isArray(t.major) && t.major.length) {
+    if (t && Array.isArray(t.major)) {
+      const major = t.major.map((value, i) => ({ value: Number(value), label: Array.isArray(t.labels) ? t.labels[i] : null }))
+        .filter(item => Number.isFinite(item.value));
       return {
-        major: t.major.map(Number).filter(Number.isFinite),
+        major: major.map(item => item.value),
         minor: Array.isArray(t.minor) ? t.minor.map(Number).filter(Number.isFinite) : [],
-        labels: Array.isArray(t.labels) ? t.labels : []
+        labels: major.map(item => item.label)
       };
     }
     const r = p.ranges[axis];
@@ -647,8 +875,9 @@
     v = Number(v);
     if (!Number.isFinite(v)) return "";
     const av = Math.abs(v);
-    if (av >= 1000000) return sciLabel(v);
-    if (av >= 1000) return Math.round(v).toLocaleString("en-US");
+    const exponent = Math.round(Math.log10(av));
+    if (av >= 10000 && Math.abs(av - Math.pow(10, exponent)) <= av * 1e-8) return sciLabel(v);
+    if (av >= 1000) return v.toLocaleString("en-US", {maximumFractionDigits: 8});
     const rounded = Math.round(v * 100) / 100;
     return String(rounded).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1");
   }
@@ -713,7 +942,9 @@
     });
   }
   function scheduleToolboxPills() {
-    requestAnimationFrame(() => requestAnimationFrame(updateToolboxPills));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      updateToolboxPills();
+    }));
   }
   let registered = false;
   function register() {
@@ -733,9 +964,19 @@
       root.querySelectorAll(".gate-history-plot").forEach(el => {
         el.classList.toggle("active", el.dataset.plot === msg.active);
       });
+      for (const s of state.values()) {
+        if (s.payload && root.contains(s.wrap)) drawOverlay(s);
+      }
       scheduleCanvasRemeasure();
     });
     registered = true;
+    // Agent note: Only real server work starts a loader; UI echoes can arrive after draw.
+    Shiny.addCustomMessageHandler("flowjo-gating-pending", msg => {
+      document.querySelectorAll(".gate-canvas-wrap").forEach(wrap => {
+        if (msg.pending) queuePending(wrap);
+        else clearPending(wrap);
+      });
+    });
     scheduleToolboxPills();
   }
   document.addEventListener("change", e => {
@@ -743,24 +984,6 @@
   });
   document.addEventListener("click", e => {
     if (e.target && e.target.closest(".plot-toolbox, .Pinhki-plot-toolbox")) scheduleToolboxPills();
-  });
-  document.addEventListener("pointerdown", e => {
-    const handle = e.target && e.target.closest(".gate-nav-resizer");
-    if (!handle) return;
-    const split = handle.closest(".gate-nav-split");
-    if (!split) return;
-    e.preventDefault();
-    const move = ev => {
-      const r = split.getBoundingClientRect();
-      const left = clamp(ev.clientX - r.left, 220, Math.max(260, r.width - 360));
-      split.style.gridTemplateColumns = `${left}px 6px minmax(0, 1fr)`;
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
   });
   document.addEventListener("keydown", e => {
     const card = e.target && e.target.closest && e.target.closest(".gate-preview-card");
